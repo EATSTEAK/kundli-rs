@@ -135,6 +135,59 @@ fn derive_planet_placements_and_houses_use_cusps_for_non_whole_sign_systems() {
 }
 
 #[test]
+fn derive_lagna_returns_error_for_invalid_ascendant() {
+    let astro = AstroResult {
+        bodies: vec![],
+        ascendant_longitude: f64::NAN,
+        mc_longitude: 90.0,
+        house_cusps: vec![],
+        meta: sample_meta(),
+    };
+
+    let error = derive_lagna(&astro).unwrap_err();
+
+    assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_nan()));
+}
+
+#[test]
+fn derive_planet_placements_returns_error_for_invalid_body_longitude() {
+    let astro = AstroResult {
+        bodies: vec![sample_body(AstroBody::Sun, f64::INFINITY, 1.0)],
+        ascendant_longitude: 45.0,
+        mc_longitude: 135.0,
+        house_cusps: vec![],
+        meta: sample_meta(),
+    };
+    let config = KundliConfig {
+        house_system: HouseSystem::WholeSign,
+        ..KundliConfig::default()
+    };
+
+    let error = derive_planet_placements(&astro, &config).unwrap_err();
+
+    assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_infinite()));
+}
+
+#[test]
+fn derive_houses_returns_error_for_invalid_ascendant_in_whole_sign() {
+    let astro = AstroResult {
+        bodies: vec![],
+        ascendant_longitude: f64::NAN,
+        mc_longitude: 90.0,
+        house_cusps: vec![],
+        meta: sample_meta(),
+    };
+    let config = KundliConfig {
+        house_system: HouseSystem::WholeSign,
+        ..KundliConfig::default()
+    };
+
+    let error = derive_houses(&astro, &config).unwrap_err();
+
+    assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_nan()));
+}
+
+#[test]
 fn derive_d1_chart_returns_error_for_invalid_cusp_count() {
     let astro = AstroResult {
         bodies: vec![sample_body(AstroBody::Sun, 50.0, 1.0)],

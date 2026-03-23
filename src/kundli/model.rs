@@ -96,6 +96,11 @@ pub struct PlanetPlacement {
     pub is_retrograde: bool,
 }
 
+/// Derived house metadata.
+///
+/// `cusp_longitude` represents the start longitude of the house.
+/// For cusp-based systems this is the reported cusp longitude, and for
+/// WholeSign houses this is the sign boundary that anchors the house.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HouseResult {
     pub house: HouseNumber,

@@ -53,6 +53,7 @@ pub fn derive_houses(
     match config.house_system {
         HouseSystem::WholeSign => {
             let ascendant_longitude = normalize_longitude(astro.ascendant_longitude)?;
+            // WholeSign houses are anchored to sign boundaries, not the literal ascendant degree.
             let first_house_cusp = (ascendant_longitude / DEGREES_PER_SIGN).floor() * DEGREES_PER_SIGN;
 
             (0..NUM_HOUSES)
