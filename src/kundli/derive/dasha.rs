@@ -5,9 +5,14 @@ use crate::kundli::derive::nakshatra::{
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{DashaLord, DashaPeriod, VimshottariDasha};
 
+// Use a tropical year approximation for mapping Vimshottari year lengths onto Julian days.
 const DAYS_PER_YEAR: f64 = 365.25;
 
 pub fn derive_vimshottari_dasha(astro: &AstroResult) -> Result<VimshottariDasha, DeriveError> {
+    if astro.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
+        return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
+    }
+
     let moon = astro
         .bodies
         .iter()

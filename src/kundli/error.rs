@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::kundli::astro::AstroError;
+use crate::kundli::astro::{AstroError, HouseSystem, ZodiacType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeriveError {
@@ -8,6 +8,8 @@ pub enum DeriveError {
     InvalidHouseCusps(usize),
     InvalidLongitude(f64),
     InvalidPada(u8),
+    UnsupportedZodiac(ZodiacType),
+    UnsupportedD9HouseSystem(HouseSystem),
 }
 
 impl fmt::Display for DeriveError {
@@ -22,6 +24,12 @@ impl fmt::Display for DeriveError {
             }
             Self::InvalidPada(value) => {
                 write!(f, "invalid pada value: {value}; expected a value in 1..=4")
+            }
+            Self::UnsupportedZodiac(zodiac) => {
+                write!(f, "unsupported zodiac for derive operation: {zodiac:?}; expected sidereal data")
+            }
+            Self::UnsupportedD9HouseSystem(house_system) => {
+                write!(f, "unsupported D9 house system: {house_system:?}; expected WholeSign")
             }
         }
     }

@@ -47,7 +47,13 @@ fn derive_d9_planet_placements(astro: &AstroResult) -> Result<Vec<PlanetPlacemen
 }
 
 pub fn derive_d9_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D9Chart, DeriveError> {
-    let _ = config;
+    if astro.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
+        return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
+    }
+
+    if config.house_system != HouseSystem::WholeSign {
+        return Err(DeriveError::UnsupportedD9HouseSystem(config.house_system));
+    }
 
     Ok(D9Chart {
         lagna: derive_d9_lagna(astro)?,

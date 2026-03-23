@@ -105,3 +105,21 @@ fn derive_vimshottari_dasha_wraps_sequence_after_mercury() {
     assert_eq!(dasha.mahadashas[1].lord, DashaLord::Ketu);
     assert_eq!(dasha.mahadashas[2].lord, DashaLord::Venus);
 }
+
+#[test]
+fn derive_vimshottari_dasha_rejects_non_sidereal_astro_results() {
+    let astro = AstroResult {
+        bodies: vec![sample_body(AstroBody::Moon, 10.0)],
+        ascendant_longitude: 0.0,
+        mc_longitude: 90.0,
+        house_cusps: vec![],
+        meta: AstroMeta {
+            zodiac: ZodiacType::Tropical,
+            ..sample_meta(2451545.0)
+        },
+    };
+
+    let error = derive_vimshottari_dasha(&astro).unwrap_err();
+
+    assert_eq!(error, DeriveError::UnsupportedZodiac(ZodiacType::Tropical));
+}
