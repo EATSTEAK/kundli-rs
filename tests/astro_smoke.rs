@@ -4,6 +4,10 @@ use kundli_rs::kundli::astro::{
     AstroBody, AstroEngine, AstroRequest, Ayanamsha, HouseSystem, NodeType, SwissEphAstroEngine,
     SwissEphConfig, ZodiacType,
 };
+use kundli_rs::kundli::config::KundliConfig;
+use kundli_rs::kundli::derive::d1::derive_d1_chart;
+use kundli_rs::kundli::derive::d9::derive_d9_chart;
+use kundli_rs::kundli::derive::dasha::derive_vimshottari_dasha;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -83,10 +87,8 @@ fn to_node_type(node_type: &str) -> NodeType {
     }
 }
 
-#[test]
-fn smoke_fixture_returns_requested_bodies_and_house_shape() {
-    let fixture = load_fixture();
-    let request = AstroRequest {
+fn build_request(fixture: &SmokeFixture) -> AstroRequest {
+    AstroRequest {
         jd_ut: fixture.jd_ut,
         latitude: fixture.latitude,
         longitude: fixture.longitude,
@@ -95,7 +97,24 @@ fn smoke_fixture_returns_requested_bodies_and_house_shape() {
         house_system: to_house_system(&fixture.house_system),
         node_type: to_node_type(&fixture.node_type),
         bodies: fixture.bodies.iter().map(|body| to_body(body)).collect(),
-    };
+    }
+}
+
+fn build_config(request: &AstroRequest) -> KundliConfig {
+    KundliConfig {
+        zodiac: request.zodiac,
+        ayanamsha: request.ayanamsha,
+        house_system: request.house_system,
+        node_type: request.node_type,
+        include_d9: true,
+        include_dasha: true,
+    }
+}
+
+#[test]
+fn smoke_fixture_returns_requested_bodies_and_house_shape() {
+    let fixture = load_fixture();
+    let request = build_request(&fixture);
     let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
 
     let result = engine.calculate(&request).unwrap();
@@ -124,4 +143,37 @@ fn smoke_fixture_returns_requested_bodies_and_house_shape() {
         result.meta.ayanamsha_value.is_some(),
         fixture.expect_ayanamsha_value
     );
+}
+
+#[test]
+fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
+    let fixture = load_fixture();
+    let request = build_request(&fixture);
+    let config = build_config(&request);
+    let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
+
+    let result = engine.calculate(&request).unwrap();
+    let d1 = derive_d1_chart(&result, &config).unwrap();
+    let d9 = derive_d9_chart(&result, &config).unwrap();
+    let dasha = derive_vimshottari_dasha(&result).unwrap();
+
+    assert_eq!(d1.planets.len(), fixture.expected_body_count);
+    assert_eq!(d1.houses.len(), fixture.expected_house_cusp_count);
+    assert_eq!(d9.planets.len(), fixture.expected_body_count);
+    assert_eq!(dasha.mahadashas.len(), 9);
+    assert_eq!(dasha.current_mahadasha, dasha.mahadashas[0]);
+    assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
+    assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
+    assert_eq!(
+        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        request.bodies
+    );
+    assert_eq!(
+        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        request.bodies
+    );
+    assert!(d1.lagna.longitude.is_finite());
+    assert!(d9.lagna.longitude.is_finite());
+    assert!(d1.planets.iter().all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0)));
+    assert!(d9.planets.iter().all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0)));
 }
