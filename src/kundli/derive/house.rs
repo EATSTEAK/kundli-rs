@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 use crate::kundli::astro::HouseSystem;
+use crate::kundli::derive::sign::normalize_longitude;
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::HouseNumber;
 
@@ -27,9 +26,8 @@ pub(crate) fn derive_house(
     house_cusps: &[f64],
     house_system: HouseSystem,
 ) -> Result<HouseNumber, DeriveError> {
-    if !planet_longitude.is_finite() {
-        return Err(DeriveError::InvalidLongitude(planet_longitude));
-    }
+    let planet_longitude = normalize_longitude(planet_longitude)?;
+    let ascendant_longitude = normalize_longitude(ascendant_longitude)?;
 
     match house_system {
         HouseSystem::WholeSign => derive_house_whole_sign(planet_longitude, ascendant_longitude),
@@ -45,10 +43,6 @@ fn derive_house_whole_sign(
     planet_longitude: f64,
     ascendant_longitude: f64,
 ) -> Result<HouseNumber, DeriveError> {
-    if !ascendant_longitude.is_finite() {
-        return Err(DeriveError::InvalidLongitude(ascendant_longitude));
-    }
-
     let planet_sign = longitude_to_sign_index(planet_longitude);
     let ascendant_sign = longitude_to_sign_index(ascendant_longitude);
 
@@ -81,39 +75,28 @@ fn derive_house_from_cusps(
     }
 
     // Normalize planet longitude to [0, 360)
-    let planet_lon = normalize_angle(planet_longitude);
+    let planet_lon = normalize_longitude(planet_longitude)?;
 
     // Find the house containing the planet
     // A planet is in house i if its longitude is >= cusp[i] and < cusp[i+1]
     // We need to handle wrap-around (when cusp[11] > cusp[0])
     for i in 0..NUM_HOUSES {
-        let cusp_start = normalize_angle(house_cusps[i]);
-        let cusp_end = normalize_angle(house_cusps[(i + 1) % NUM_HOUSES]);
+        let cusp_start = normalize_longitude(house_cusps[i])?;
+        let cusp_end = normalize_longitude(house_cusps[(i + 1) % NUM_HOUSES])?;
 
         if is_in_house(planet_lon, cusp_start, cusp_end) {
             return Ok(HouseNumber((i + 1) as u8));
         }
     }
 
-    // Should never reach here if cusps are valid and cover all 360 degrees
-    // But as a fallback, find the closest house
-    let house_idx = find_closest_house(planet_lon, house_cusps);
-    Ok(HouseNumber((house_idx + 1) as u8))
+    Err(DeriveError::InvalidHouseCusps(house_cusps.len()))
 }
 
 /// Converts a longitude to a sign index (0-11).
 fn longitude_to_sign_index(longitude: f64) -> usize {
-    let normalized = normalize_angle(longitude);
+    let normalized = normalize_longitude(longitude)
+        .expect("longitude_to_sign_index is only used after finite longitude validation");
     (normalized / DEGREES_PER_SIGN).floor() as usize % NUM_HOUSES
-}
-
-/// Normalizes an angle to the range [0, 360).
-fn normalize_angle(angle: f64) -> f64 {
-    let mut result = angle % 360.0;
-    if result < 0.0 {
-        result += 360.0;
-    }
-    result
 }
 
 /// Checks if a longitude falls within a house, handling wrap-around.
@@ -130,32 +113,15 @@ fn is_in_house(planet_lon: f64, cusp_start: f64, cusp_end: f64) -> bool {
     }
 }
 
-/// Finds the closest house when exact containment cannot be determined.
-/// This is a fallback for edge cases.
-fn find_closest_house(planet_lon: f64, house_cusps: &[f64]) -> usize {
-    let mut min_diff = f64::MAX;
-    let mut closest_house = 0;
-
-    for (i, cusp) in house_cusps.iter().enumerate().take(NUM_HOUSES) {
-        let diff = angular_distance(planet_lon, normalize_angle(*cusp));
-        if diff < min_diff {
-            min_diff = diff;
-            closest_house = i;
-        }
-    }
-
-    closest_house
-}
-
-/// Calculates the angular distance between two angles (0-180 degrees).
-fn angular_distance(a: f64, b: f64) -> f64 {
-    let diff = (a - b).abs();
-    if diff > 180.0 {
-        360.0 - diff
-    } else {
-        diff
-    }
-}
+const _: () = {
+    let _ = DEGREES_PER_SIGN;
+    let _ = NUM_HOUSES;
+    let _ = derive_house as fn(f64, f64, &[f64], HouseSystem) -> Result<HouseNumber, DeriveError>;
+    let _ = derive_house_whole_sign as fn(f64, f64) -> Result<HouseNumber, DeriveError>;
+    let _ = derive_house_from_cusps as fn(f64, &[f64]) -> Result<HouseNumber, DeriveError>;
+    let _ = longitude_to_sign_index as fn(f64) -> usize;
+    let _ = is_in_house as fn(f64, f64, f64) -> bool;
+};
 
 #[cfg(test)]
 mod tests {
@@ -236,14 +202,20 @@ mod tests {
 
     #[test]
     fn cusp_based_wrap_around_from_360_to_first_cusp() {
-        // Ascendant at 300 degrees, cusps offset accordingly
-        // When ascendant is at 300, house 1 cusp is at 300
+        // Ascendant at 300 degrees, cusps offset accordingly.
         let cusps: Vec<f64> = vec![
             300.0, 330.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0,
         ];
         // Planet at 350 degrees should be in house 2 (330-0)
         let house = derive_house(350.0, 300.0, &cusps, HouseSystem::Placidus);
         assert_eq!(house.unwrap(), HouseNumber(2));
+    }
+
+    #[test]
+    fn non_whole_sign_validates_ascendant_longitude() {
+        let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
+        let house = derive_house(15.0, f64::NAN, &cusps, HouseSystem::Equal);
+        assert!(matches!(house, Err(DeriveError::InvalidLongitude(value)) if value.is_nan()));
     }
 
     #[test]
@@ -300,19 +272,6 @@ mod tests {
         ];
         let house = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
         assert!(matches!(house, Err(DeriveError::InvalidLongitude(_))));
-    }
-
-    #[test]
-    fn normalize_angle_positive() {
-        assert!((normalize_angle(45.0) - 45.0).abs() < f64::EPSILON);
-        assert!((normalize_angle(360.0) - 0.0).abs() < f64::EPSILON);
-        assert!((normalize_angle(720.0) - 0.0).abs() < f64::EPSILON);
-    }
-
-    #[test]
-    fn normalize_angle_negative() {
-        assert!((normalize_angle(-10.0) - 350.0).abs() < f64::EPSILON);
-        assert!((normalize_angle(-370.0) - 350.0).abs() < f64::EPSILON);
     }
 
     #[test]

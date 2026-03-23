@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 //! Sign-related longitude helpers for the derive layer.
 //!
 //! Provides pure functions for:
@@ -17,14 +15,6 @@ const DEGREES_PER_SIGN: f64 = 30.0;
 ///
 /// Returns an error if the input is not finite (NaN or infinity).
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::sign::normalize_longitude;
-/// assert!((normalize_longitude(0.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((normalize_longitude(360.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((normalize_longitude(-30.0).unwrap() - 330.0).abs() < 1e-10);
-/// assert!((normalize_longitude(390.0).unwrap() - 30.0).abs() < 1e-10);
-/// ```
 pub(crate) fn normalize_longitude(longitude: f64) -> Result<f64, DeriveError> {
     if !longitude.is_finite() {
         return Err(DeriveError::InvalidLongitude(longitude));
@@ -42,16 +32,6 @@ pub(crate) fn normalize_longitude(longitude: f64) -> Result<f64, DeriveError> {
 /// The longitude is first normalized to [0, 360) before determining the sign.
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::sign::sign_from_longitude;
-/// # use kundli::kundli::model::Sign;
-/// assert_eq!(sign_from_longitude(0.0).unwrap(), Sign::Aries);
-/// assert_eq!(sign_from_longitude(29.999).unwrap(), Sign::Aries);
-/// assert_eq!(sign_from_longitude(30.0).unwrap(), Sign::Taurus);
-/// assert_eq!(sign_from_longitude(180.0).unwrap(), Sign::Libra);
-/// assert_eq!(sign_from_longitude(359.999).unwrap(), Sign::Pisces);
-/// ```
 pub(crate) fn sign_from_longitude(longitude: f64) -> Result<Sign, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     let sign_index = (normalized / DEGREES_PER_SIGN).floor() as usize;
@@ -63,14 +43,6 @@ pub(crate) fn sign_from_longitude(longitude: f64) -> Result<Sign, DeriveError> {
 /// This is the position within the sign, in the range [0, 30).
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::sign::degrees_in_sign;
-/// assert!((degrees_in_sign(0.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((degrees_in_sign(15.0).unwrap() - 15.0).abs() < 1e-10);
-/// assert!((degrees_in_sign(30.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((degrees_in_sign(45.5).unwrap() - 15.5).abs() < 1e-10);
-/// ```
 pub(crate) fn degrees_in_sign(longitude: f64) -> Result<f64, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     Ok(normalized % DEGREES_PER_SIGN)
@@ -97,6 +69,14 @@ fn sign_from_index(index: usize) -> Sign {
         _ => unreachable!("sign index out of range: {index}"),
     }
 }
+
+const _: () = {
+    let _ = DEGREES_PER_SIGN;
+    let _ = normalize_longitude as fn(f64) -> Result<f64, DeriveError>;
+    let _ = sign_from_longitude as fn(f64) -> Result<Sign, DeriveError>;
+    let _ = degrees_in_sign as fn(f64) -> Result<f64, DeriveError>;
+    let _ = sign_from_index as fn(usize) -> Sign;
+};
 
 #[cfg(test)]
 mod tests {

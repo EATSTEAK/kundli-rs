@@ -7,6 +7,7 @@ pub enum DeriveError {
     MissingMoon,
     InvalidHouseCusps(usize),
     InvalidLongitude(f64),
+    InvalidPada(u8),
 }
 
 impl fmt::Display for DeriveError {
@@ -18,6 +19,9 @@ impl fmt::Display for DeriveError {
             }
             Self::InvalidLongitude(longitude) => {
                 write!(f, "invalid longitude: {longitude}; expected a finite degree value")
+            }
+            Self::InvalidPada(value) => {
+                write!(f, "invalid pada value: {value}; expected a value in 1..=4")
             }
         }
     }

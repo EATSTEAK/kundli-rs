@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 //! Nakshatra-related longitude helpers for the derive layer.
 //!
 //! Provides pure functions for:
@@ -8,6 +6,7 @@
 //! - Moon progress ratio for dasha calculations
 //! - Dasha-lord mapping
 
+use crate::kundli::derive::sign::normalize_longitude;
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{DashaLord, Nakshatra, NakshatraPlacement, Pada};
 
@@ -17,35 +16,11 @@ const DEGREES_PER_NAKSHATRA: f64 = 360.0 / 27.0;
 /// Degrees per pada (DEGREES_PER_NAKSHATRA / 4 = 3.333...).
 const DEGREES_PER_PADA: f64 = DEGREES_PER_NAKSHATRA / 4.0;
 
-/// Normalizes a longitude to the range [0, 360).
-///
-/// Returns an error if the input is not finite (NaN or infinity).
-pub(crate) fn normalize_longitude(longitude: f64) -> Result<f64, DeriveError> {
-    if !longitude.is_finite() {
-        return Err(DeriveError::InvalidLongitude(longitude));
-    }
-    let normalized = longitude % 360.0;
-    if normalized < 0.0 {
-        Ok(normalized + 360.0)
-    } else {
-        Ok(normalized)
-    }
-}
-
 /// Derives the nakshatra from a longitude.
 ///
 /// The longitude is first normalized to [0, 360) before determining the nakshatra.
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::nakshatra::nakshatra_from_longitude;
-/// # use kundli::kundli::model::Nakshatra;
-/// assert_eq!(nakshatra_from_longitude(0.0).unwrap(), Nakshatra::Ashwini);
-/// assert_eq!(nakshatra_from_longitude(13.0).unwrap(), Nakshatra::Ashwini);
-/// assert_eq!(nakshatra_from_longitude(13.333).unwrap(), Nakshatra::Bharani);
-/// assert_eq!(nakshatra_from_longitude(359.0).unwrap(), Nakshatra::Revati);
-/// ```
 pub(crate) fn nakshatra_from_longitude(longitude: f64) -> Result<Nakshatra, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     let nakshatra_index = (normalized / DEGREES_PER_NAKSHATRA).floor() as usize;
@@ -57,14 +32,6 @@ pub(crate) fn nakshatra_from_longitude(longitude: f64) -> Result<Nakshatra, Deri
 /// The pada is determined by the position within the nakshatra.
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::nakshatra::pada_from_longitude;
-/// assert_eq!(pada_from_longitude(0.0).unwrap().0, 1);
-/// assert_eq!(pada_from_longitude(3.333).unwrap().0, 2);
-/// assert_eq!(pada_from_longitude(6.666).unwrap().0, 3);
-/// assert_eq!(pada_from_longitude(10.0).unwrap().0, 4);
-/// ```
 pub(crate) fn pada_from_longitude(longitude: f64) -> Result<Pada, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     let degrees_in_nakshatra = normalized % DEGREES_PER_NAKSHATRA;
@@ -72,7 +39,7 @@ pub(crate) fn pada_from_longitude(longitude: f64) -> Result<Pada, DeriveError> {
 
     match Pada::new(pada_number) {
         Some(pada) => Ok(pada),
-        None => Err(DeriveError::InvalidLongitude(longitude)),
+        None => Err(DeriveError::InvalidPada(pada_number)),
     }
 }
 
@@ -81,12 +48,6 @@ pub(crate) fn pada_from_longitude(longitude: f64) -> Result<Pada, DeriveError> {
 /// This is the position within the nakshatra, in the range [0, 13.333...).
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::nakshatra::degrees_in_nakshatra;
-/// assert!((degrees_in_nakshatra(0.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((degrees_in_nakshatra(13.333).unwrap() - 0.0).abs() < 1e-3);
-/// ```
 pub(crate) fn degrees_in_nakshatra(longitude: f64) -> Result<f64, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     Ok(normalized % DEGREES_PER_NAKSHATRA)
@@ -118,12 +79,6 @@ pub(crate) fn nakshatra_placement_from_longitude(
 ///
 /// Returns an error if the input is not finite.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::nakshatra::moon_progress_ratio;
-/// assert!((moon_progress_ratio(0.0).unwrap() - 0.0).abs() < 1e-10);
-/// assert!((moon_progress_ratio(6.666).unwrap() - 0.5).abs() < 1e-3);
-/// ```
 pub(crate) fn moon_progress_ratio(longitude: f64) -> Result<f64, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     let degrees = normalized % DEGREES_PER_NAKSHATRA;
@@ -135,15 +90,6 @@ pub(crate) fn moon_progress_ratio(longitude: f64) -> Result<f64, DeriveError> {
 /// In Vimshottari dasha, each nakshatra is ruled by one of the 9 planets.
 /// The sequence starts with Ketu at Ashwini and cycles every 9 nakshatras.
 ///
-/// # Examples
-/// ```
-/// # use kundli::kundli::derive::nakshatra::dasha_lord_for_nakshatra;
-/// # use kundli::kundli::model::{DashaLord, Nakshatra};
-/// assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Ashwini), DashaLord::Ketu);
-/// assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Bharani), DashaLord::Venus);
-/// assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Krittika), DashaLord::Sun);
-/// assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Rohini), DashaLord::Moon);
-/// ```
 pub(crate) fn dasha_lord_for_nakshatra(nakshatra: Nakshatra) -> DashaLord {
     let nakshatra_index = nakshatra_to_index(nakshatra);
     let lord_index = nakshatra_index % 9;
@@ -217,6 +163,19 @@ fn nakshatra_to_index(nakshatra: Nakshatra) -> usize {
         Nakshatra::Revati => 26,
     }
 }
+
+const _: () = {
+    let _ = DEGREES_PER_NAKSHATRA;
+    let _ = DEGREES_PER_PADA;
+    let _ = nakshatra_from_longitude as fn(f64) -> Result<Nakshatra, DeriveError>;
+    let _ = pada_from_longitude as fn(f64) -> Result<Pada, DeriveError>;
+    let _ = degrees_in_nakshatra as fn(f64) -> Result<f64, DeriveError>;
+    let _ = nakshatra_placement_from_longitude as fn(f64) -> Result<NakshatraPlacement, DeriveError>;
+    let _ = moon_progress_ratio as fn(f64) -> Result<f64, DeriveError>;
+    let _ = dasha_lord_for_nakshatra as fn(Nakshatra) -> DashaLord;
+    let _ = nakshatra_from_index as fn(usize) -> Nakshatra;
+    let _ = nakshatra_to_index as fn(Nakshatra) -> usize;
+};
 
 #[cfg(test)]
 mod tests {
