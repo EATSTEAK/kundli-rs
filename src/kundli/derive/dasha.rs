@@ -1,29 +1,23 @@
 use crate::kundli::astro::{AstroBody, AstroResult};
-use crate::kundli::derive::nakshatra::{
-    dasha_lord_for_nakshatra, moon_progress_ratio, nakshatra_placement_from_longitude,
-};
+use crate::kundli::derive::input::KundliDeriveInput;
+use crate::kundli::derive::nakshatra::dasha_lord_for_nakshatra;
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{DashaLord, DashaPeriod, VimshottariDasha};
 
 // Use a tropical year approximation for mapping Vimshottari year lengths onto Julian days.
 const DAYS_PER_YEAR: f64 = 365.25;
 
-pub fn derive_vimshottari_dasha(astro: &AstroResult) -> Result<VimshottariDasha, DeriveError> {
-    if astro.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
-        return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
+pub(crate) fn derive_vimshottari_dasha_from_input(
+    input: &KundliDeriveInput,
+) -> Result<VimshottariDasha, DeriveError> {
+    if input.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
+        return Err(DeriveError::UnsupportedZodiac(input.meta.zodiac));
     }
 
-    let moon = astro
-        .bodies
-        .iter()
-        .find(|body| body.body == AstroBody::Moon)
-        .ok_or(DeriveError::MissingMoon)?;
-
-    let moon_nakshatra = nakshatra_placement_from_longitude(moon.longitude)?;
-    let current_lord = dasha_lord_for_nakshatra(moon_nakshatra.nakshatra);
-    let elapsed_ratio = moon_progress_ratio(moon.longitude)?;
+    let moon = input.body(AstroBody::Moon).ok_or(DeriveError::MissingMoon)?;
+    let current_lord = dasha_lord_for_nakshatra(moon.nakshatra.nakshatra);
     let current_duration_days = mahadasha_duration_days(current_lord);
-    let current_start_jd_ut = astro.meta.jd_ut - current_duration_days * elapsed_ratio;
+    let current_start_jd_ut = input.meta.jd_ut - current_duration_days * moon.nakshatra_progress_ratio;
     let sequence_start = DashaLord::SEQUENCE
         .iter()
         .position(|&lord| lord == current_lord)
@@ -46,10 +40,15 @@ pub fn derive_vimshottari_dasha(astro: &AstroResult) -> Result<VimshottariDasha,
     }
 
     Ok(VimshottariDasha {
-        moon_nakshatra: moon_nakshatra.nakshatra,
+        moon_nakshatra: moon.nakshatra.nakshatra,
         current_mahadasha: mahadashas[0].clone(),
         mahadashas,
     })
+}
+
+pub fn derive_vimshottari_dasha(astro: &AstroResult) -> Result<VimshottariDasha, DeriveError> {
+    let input = KundliDeriveInput::from_astro(astro)?;
+    derive_vimshottari_dasha_from_input(&input)
 }
 
 fn mahadasha_duration_days(lord: DashaLord) -> f64 {

@@ -1,50 +1,8 @@
-#[path = "../src/kundli/derive/house.rs"]
-mod house;
-#[path = "../src/kundli/derive/nakshatra.rs"]
-mod nakshatra;
-#[path = "../src/kundli/derive/sign.rs"]
-mod sign;
-
-mod kundli {
-    pub mod astro {
-        pub use kundli_rs::kundli::astro::*;
-    }
-
-    pub mod config {
-        pub use kundli_rs::kundli::config::*;
-    }
-
-    pub mod error {
-        pub use kundli_rs::kundli::error::*;
-    }
-
-    pub mod model {
-        pub use kundli_rs::kundli::model::*;
-    }
-
-    pub mod derive {
-        pub mod sign {
-            pub(crate) use crate::sign::*;
-        }
-
-        pub mod nakshatra {
-            pub(crate) use crate::nakshatra::*;
-        }
-
-        pub mod house {
-            pub(crate) use crate::house::*;
-        }
-    }
-}
-
-#[path = "../src/kundli/derive/d9.rs"]
-mod d9;
-
-use d9::derive_d9_chart;
 use kundli_rs::kundli::astro::{
     AstroBody, AstroBodyPosition, AstroMeta, AstroResult, Ayanamsha, HouseSystem, ZodiacType,
 };
 use kundli_rs::kundli::config::KundliConfig;
+use kundli_rs::kundli::derive::d9::derive_d9_chart;
 use kundli_rs::kundli::error::DeriveError;
 use kundli_rs::kundli::model::{HouseNumber, Nakshatra, Pada, Sign};
 
