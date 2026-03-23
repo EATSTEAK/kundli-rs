@@ -2,6 +2,10 @@
 name = "kundli-rs"
 version = "0.1.0"
 edition = "2024"
+description = "A Rust library for calculating astrological kundli charts using the Swiss Ephemeris."
+authors = ["Hyomin Koo <me@eatsteak.dev>"]
+license = "AGPL-3.0"
+
 
 [dependencies]
 swiss-eph = "0.2.1"
