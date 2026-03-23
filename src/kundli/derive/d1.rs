@@ -19,6 +19,7 @@ pub(crate) fn derive_lagna_from_input(
     })
 }
 
+/// Derives the lagna from a raw astronomical result.
 pub fn derive_lagna(astro: &AstroResult) -> Result<LagnaResult, DeriveError> {
     let input = KundliDeriveInput::from_astro(astro)?;
     derive_lagna_from_input(&input)
@@ -50,6 +51,7 @@ pub(crate) fn derive_planet_placements_from_input(
         .collect()
 }
 
+/// Derives planet placements for the primary natal chart (D1).
 pub fn derive_planet_placements(
     astro: &AstroResult,
     config: &KundliConfig,
@@ -104,6 +106,7 @@ pub(crate) fn derive_houses_from_input(
     }
 }
 
+/// Derives house metadata for the primary natal chart (D1).
 pub fn derive_houses(
     astro: &AstroResult,
     config: &KundliConfig,
@@ -123,6 +126,11 @@ pub(crate) fn derive_d1_chart_from_input(
     })
 }
 
+/// Derives a complete D1 chart from a raw astronomical result.
+///
+/// This is a lower-level helper than [`crate::calculate_kundli`]. Prefer the
+/// high-level API unless you already have an [`AstroResult`] and only need the
+/// D1 layer.
 pub fn derive_d1_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D1Chart, DeriveError> {
     let input = KundliDeriveInput::from_astro(astro)?;
     derive_d1_chart_from_input(&input, config)

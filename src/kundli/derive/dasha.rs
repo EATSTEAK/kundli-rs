@@ -49,6 +49,10 @@ pub(crate) fn derive_vimshottari_dasha_from_input(
     })
 }
 
+/// Derives Vimshottari mahadasha periods from a raw astronomical result.
+///
+/// This is a lower-level helper than [`crate::calculate_kundli`]. The input
+/// must be sidereal and must include the Moon.
 pub fn derive_vimshottari_dasha(astro: &AstroResult) -> Result<VimshottariDasha, DeriveError> {
     let input = KundliDeriveInput::from_astro(astro)?;
     derive_vimshottari_dasha_from_input(&input)

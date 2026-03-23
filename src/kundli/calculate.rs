@@ -1,3 +1,9 @@
+//! High-level kundli calculation entrypoints.
+//!
+//! Most consumers should start with [`calculate_kundli`]. Use
+//! [`calculate_kundli_with_engine`] when you want to provide a custom
+//! [`AstroEngine`] implementation.
+
 use crate::kundli::astro::{
     AstroEngine, AstroRequest, AstroResult, SwissEphAstroEngine, SwissEphConfig,
 };
@@ -8,6 +14,16 @@ use crate::kundli::derive::dasha::derive_vimshottari_dasha;
 use crate::kundli::error::KundliError;
 use crate::kundli::model::{CalculationMeta, KundliResult};
 
+/// Calculates a complete kundli using the default Swiss Ephemeris-backed
+/// engine.
+///
+/// This is the most convenient entrypoint for consumers who do not need to
+/// customize the astronomical backend. It validates the request, checks that
+/// request-level settings match the provided [`KundliConfig`], runs the default
+/// engine, and assembles the final [`KundliResult`].
+///
+/// Optional output sections are controlled by [`KundliConfig::include_d9`] and
+/// [`KundliConfig::include_dasha`].
 pub fn calculate_kundli(
     request: AstroRequest,
     config: KundliConfig,
@@ -16,6 +32,23 @@ pub fn calculate_kundli(
     calculate_kundli_with_engine(&engine, &request, &config)
 }
 
+/// Calculates a complete kundli with an injected astronomical engine.
+///
+/// This advanced entrypoint is useful when you want to:
+///
+/// - reuse a custom [`AstroEngine`],
+/// - test the derive pipeline with stubbed astro data, or
+/// - source astronomical positions from a backend other than the default Swiss
+///   Ephemeris implementation.
+///
+/// The function performs three steps:
+///
+/// 1. validates the [`AstroRequest`],
+/// 2. verifies that request-level settings match the supplied [`KundliConfig`],
+/// 3. derives the requested kundli layers from the returned [`AstroResult`].
+///
+/// Returns [`KundliError::InputConfigMismatch`] when duplicated settings on the
+/// request and config disagree.
 pub fn calculate_kundli_with_engine<E: AstroEngine>(
     engine: &E,
     request: &AstroRequest,

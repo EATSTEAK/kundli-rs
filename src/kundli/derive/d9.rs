@@ -26,6 +26,10 @@ pub(crate) fn derive_d9_chart_from_input(
     })
 }
 
+/// Derives a Navamsa (D9) chart from a raw astronomical result.
+///
+/// This lower-level helper expects sidereal input and currently supports only
+/// [`HouseSystem::WholeSign`].
 pub fn derive_d9_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D9Chart, DeriveError> {
     let input = KundliDeriveInput::from_astro(astro)?;
     derive_d9_chart_from_input(&input, config)

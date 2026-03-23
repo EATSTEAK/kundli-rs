@@ -2,20 +2,25 @@ use crate::kundli::astro::{
     AstroBodyPosition, AstroError, AstroMeta, AstroRequest, AstroResult, ephemeris::Ephemeris,
 };
 
+/// Backend abstraction for astronomical calculations.
 pub trait AstroEngine {
+    /// Calculates raw astronomical output for a validated request.
     fn calculate(&self, request: &AstroRequest) -> Result<AstroResult, AstroError>;
 }
 
+/// Configuration for [`SwissEphAstroEngine`].
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SwissEphConfig {
     ephemeris_path: Option<String>,
 }
 
 impl SwissEphConfig {
+    /// Creates an empty Swiss Ephemeris configuration.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the ephemeris path used by the backend.
     pub fn with_ephemeris_path(mut self, ephemeris_path: impl Into<String>) -> Self {
         self.ephemeris_path = Some(ephemeris_path.into());
         self
@@ -26,12 +31,14 @@ impl SwissEphConfig {
     }
 }
 
+/// Default [`AstroEngine`] implementation backed by Swiss Ephemeris.
 #[derive(Debug, Clone, Default)]
 pub struct SwissEphAstroEngine {
     config: SwissEphConfig,
 }
 
 impl SwissEphAstroEngine {
+    /// Creates a Swiss Ephemeris-backed engine with the provided config.
     pub fn new(config: SwissEphConfig) -> Self {
         Self { config }
     }

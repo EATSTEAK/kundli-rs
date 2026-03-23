@@ -2,13 +2,21 @@ use std::fmt;
 
 use crate::kundli::astro::{AstroError, HouseSystem, ZodiacType};
 
+/// Errors returned while deriving kundli-specific structures from astronomical
+/// output.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeriveError {
+    /// Vimshottari dasha derivation requires a Moon position.
     MissingMoon,
+    /// A cusp-based house derivation expected exactly 12 cusps.
     InvalidHouseCusps(usize),
+    /// A longitude could not be interpreted as a finite degree value.
     InvalidLongitude(f64),
+    /// A pada value fell outside the supported `1..=4` range.
     InvalidPada(u8),
+    /// The derive operation requires sidereal input but received a different zodiac mode.
     UnsupportedZodiac(ZodiacType),
+    /// D9 derivation currently supports only the whole-sign house system.
     UnsupportedD9HouseSystem(HouseSystem),
 }
 
@@ -46,10 +54,14 @@ impl fmt::Display for DeriveError {
 
 impl std::error::Error for DeriveError {}
 
+/// Top-level error returned by high-level kundli calculation entrypoints.
 #[derive(Debug, Clone, PartialEq)]
 pub enum KundliError {
+    /// The astronomical layer failed or rejected the request.
     Astro(AstroError),
+    /// A kundli-specific derive step failed.
     Derive(DeriveError),
+    /// Settings duplicated between request and config did not match.
     InputConfigMismatch(&'static str),
 }
 

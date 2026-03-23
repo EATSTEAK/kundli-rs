@@ -1,11 +1,17 @@
 use std::fmt;
 
+/// Errors returned by the astronomical calculation layer.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AstroError {
+    /// The provided Julian day is not finite.
     InvalidJulianDay(f64),
+    /// The provided latitude or longitude is out of range or not finite.
     InvalidCoordinates { latitude: f64, longitude: f64 },
+    /// No bodies were requested.
     EmptyBodies,
+    /// The configured ephemeris path cannot be passed to the backend.
     InvalidEphemerisPath,
+    /// The underlying astronomical backend reported a calculation failure.
     CalculationFailed(String),
 }
 
