@@ -16,7 +16,9 @@ impl fmt::Display for DeriveError {
             Self::InvalidHouseCusps(count) => {
                 write!(f, "expected 12 house cusps, got {count}")
             }
-            Self::InvalidLongitude(longitude) => write!(f, "invalid longitude: {longitude}"),
+            Self::InvalidLongitude(longitude) => {
+                write!(f, "invalid longitude: {longitude}; expected a finite degree value")
+            }
         }
     }
 }

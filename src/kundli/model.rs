@@ -50,6 +50,15 @@ pub enum Nakshatra {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Pada(pub u8);
 
+impl Pada {
+    pub const MIN: u8 = 1;
+    pub const MAX: u8 = 4;
+
+    pub fn new(value: u8) -> Option<Self> {
+        (Self::MIN..=Self::MAX).contains(&value).then_some(Self(value))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NakshatraPlacement {
     pub nakshatra: Nakshatra,
@@ -59,6 +68,15 @@ pub struct NakshatraPlacement {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HouseNumber(pub u8);
+
+impl HouseNumber {
+    pub const MIN: u8 = 1;
+    pub const MAX: u8 = 12;
+
+    pub fn new(value: u8) -> Option<Self> {
+        (Self::MIN..=Self::MAX).contains(&value).then_some(Self(value))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LagnaResult {
@@ -109,6 +127,20 @@ pub enum DashaLord {
     Jupiter,
     Saturn,
     Mercury,
+}
+
+impl DashaLord {
+    pub const SEQUENCE: [Self; 9] = [
+        Self::Ketu,
+        Self::Venus,
+        Self::Sun,
+        Self::Moon,
+        Self::Mars,
+        Self::Rahu,
+        Self::Jupiter,
+        Self::Saturn,
+        Self::Mercury,
+    ];
 }
 
 #[derive(Debug, Clone, PartialEq)]
