@@ -1,9 +1,10 @@
 use crate::kundli::astro::{AstroResult, HouseSystem};
 use crate::kundli::config::KundliConfig;
 use crate::kundli::derive::d1::derive_lagna_from_input;
+use crate::kundli::derive::house::derive_house;
 use crate::kundli::derive::input::KundliDeriveInput;
 use crate::kundli::error::DeriveError;
-use crate::kundli::model::{D9Chart, HouseNumber, PlanetPlacement};
+use crate::kundli::model::{D9Chart, PlanetPlacement};
 
 pub(crate) fn derive_d9_chart_from_input(
     input: &KundliDeriveInput,
@@ -42,23 +43,15 @@ fn derive_d9_planet_placements_from_input(
                 longitude: body.longitude,
                 sign: body.sign,
                 degrees_in_sign: body.degrees_in_sign,
-                house: derive_d9_house(body.longitude, input.ascendant.longitude)?,
+                house: derive_house(
+                    body.longitude,
+                    input.ascendant.longitude,
+                    &[],
+                    HouseSystem::WholeSign,
+                )?,
                 nakshatra: body.nakshatra,
                 is_retrograde: body.is_retrograde,
             })
         })
         .collect()
-}
-
-fn derive_d9_house(planet_longitude: f64, ascendant_longitude: f64) -> Result<HouseNumber, DeriveError> {
-    let planet_sign = longitude_to_sign_index(planet_longitude);
-    let ascendant_sign = longitude_to_sign_index(ascendant_longitude);
-    let house_number = ((planet_sign as i32 - ascendant_sign as i32 + 12) % 12) + 1;
-
-    debug_assert!((1..=12).contains(&house_number));
-    Ok(HouseNumber(house_number as u8))
-}
-
-fn longitude_to_sign_index(longitude: f64) -> usize {
-    (longitude / 30.0).floor() as usize % 12
 }

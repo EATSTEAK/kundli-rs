@@ -14,10 +14,13 @@ pub(crate) fn derive_vimshottari_dasha_from_input(
         return Err(DeriveError::UnsupportedZodiac(input.meta.zodiac));
     }
 
-    let moon = input.body(AstroBody::Moon).ok_or(DeriveError::MissingMoon)?;
+    let moon = input
+        .body(AstroBody::Moon)
+        .ok_or(DeriveError::MissingMoon)?;
     let current_lord = dasha_lord_for_nakshatra(moon.nakshatra.nakshatra);
     let current_duration_days = mahadasha_duration_days(current_lord);
-    let current_start_jd_ut = input.meta.jd_ut - current_duration_days * moon.nakshatra_progress_ratio;
+    let current_start_jd_ut =
+        input.meta.jd_ut - current_duration_days * moon.nakshatra_progress_ratio;
     let sequence_start = DashaLord::SEQUENCE
         .iter()
         .position(|&lord| lord == current_lord)

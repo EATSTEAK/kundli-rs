@@ -1,5 +1,5 @@
 use crate::kundli::astro::{AstroBody, AstroBodyPosition, AstroMeta, AstroResult};
-use crate::kundli::derive::nakshatra::{nakshatra_placement_from_longitude, moon_progress_ratio};
+use crate::kundli::derive::nakshatra::{moon_progress_ratio, nakshatra_placement_from_longitude};
 use crate::kundli::derive::sign::{degrees_in_sign, normalize_longitude, sign_from_longitude};
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{NakshatraPlacement, Sign};
@@ -183,7 +183,11 @@ mod tests {
         let input = KundliDeriveInput::from_astro(&astro).unwrap();
 
         assert_eq!(
-            input.bodies.iter().map(|body| body.body).collect::<Vec<_>>(),
+            input
+                .bodies
+                .iter()
+                .map(|body| body.body)
+                .collect::<Vec<_>>(),
             vec![AstroBody::Saturn, AstroBody::Moon, AstroBody::Sun]
         );
         assert_eq!(input.body(AstroBody::Moon).unwrap().body, AstroBody::Moon);
@@ -203,7 +207,10 @@ mod tests {
             meta: sample_meta(),
         };
 
-        let navamsa = KundliDeriveInput::from_astro(&astro).unwrap().to_navamsa().unwrap();
+        let navamsa = KundliDeriveInput::from_astro(&astro)
+            .unwrap()
+            .to_navamsa()
+            .unwrap();
 
         assert!((navamsa.ascendant.longitude - 45.0).abs() < EPSILON);
         assert_eq!(navamsa.ascendant.sign, Sign::Taurus);
