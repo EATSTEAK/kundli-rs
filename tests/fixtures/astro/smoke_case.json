@@ -1,0 +1,13 @@
+{
+  "jd_ut": 2451545.0,
+  "latitude": 37.5665,
+  "longitude": 126.978,
+  "zodiac": "Sidereal",
+  "ayanamsha": "Lahiri",
+  "house_system": "WholeSign",
+  "node_type": "True",
+  "bodies": ["Sun", "Moon", "Rahu", "Ketu"],
+  "expected_body_count": 4,
+  "expected_house_cusp_count": 12,
+  "expect_ayanamsha_value": true
+}
