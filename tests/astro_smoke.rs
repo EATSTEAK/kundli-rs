@@ -165,15 +165,29 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
     assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
     assert_eq!(
-        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d1.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         request.bodies
     );
     assert_eq!(
-        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d9.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         request.bodies
     );
     assert!(d1.lagna.longitude.is_finite());
     assert!(d9.lagna.longitude.is_finite());
-    assert!(d1.planets.iter().all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0)));
-    assert!(d9.planets.iter().all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0)));
+    assert!(
+        d1.planets
+            .iter()
+            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0))
+    );
+    assert!(
+        d9.planets
+            .iter()
+            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0))
+    );
 }

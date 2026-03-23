@@ -72,7 +72,11 @@ fn derive_d1_chart_whole_sign_derives_lagna_planets_and_houses() {
     assert!((chart.lagna.longitude - 45.0).abs() < EPSILON);
 
     assert_eq!(
-        chart.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        chart
+            .planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn]
     );
 
@@ -110,7 +114,9 @@ fn derive_planet_placements_and_houses_use_cusps_for_non_whole_sign_systems() {
         bodies: vec![sample_body(AstroBody::Mercury, 60.0, 0.5)],
         ascendant_longitude: 45.0,
         mc_longitude: 135.0,
-        house_cusps: vec![45.0, 75.0, 105.0, 135.0, 165.0, 195.0, 225.0, 255.0, 285.0, 315.0, 345.0, 15.0],
+        house_cusps: vec![
+            45.0, 75.0, 105.0, 135.0, 165.0, 195.0, 225.0, 255.0, 285.0, 315.0, 345.0, 15.0,
+        ],
         meta: sample_meta(),
     };
     let config = KundliConfig {

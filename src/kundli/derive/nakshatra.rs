@@ -170,7 +170,8 @@ const _: () = {
     let _ = nakshatra_from_longitude as fn(f64) -> Result<Nakshatra, DeriveError>;
     let _ = pada_from_longitude as fn(f64) -> Result<Pada, DeriveError>;
     let _ = degrees_in_nakshatra as fn(f64) -> Result<f64, DeriveError>;
-    let _ = nakshatra_placement_from_longitude as fn(f64) -> Result<NakshatraPlacement, DeriveError>;
+    let _ =
+        nakshatra_placement_from_longitude as fn(f64) -> Result<NakshatraPlacement, DeriveError>;
     let _ = moon_progress_ratio as fn(f64) -> Result<f64, DeriveError>;
     let _ = dasha_lord_for_nakshatra as fn(Nakshatra) -> DashaLord;
     let _ = nakshatra_from_index as fn(usize) -> Nakshatra;
@@ -232,7 +233,10 @@ mod tests {
             nakshatra_from_longitude(360.0 - DEGREES_PER_NAKSHATRA / 2.0).unwrap(),
             Nakshatra::Revati
         );
-        assert_eq!(nakshatra_from_longitude(359.999).unwrap(), Nakshatra::Revati);
+        assert_eq!(
+            nakshatra_from_longitude(359.999).unwrap(),
+            Nakshatra::Revati
+        );
     }
 
     #[test]
@@ -383,23 +387,50 @@ mod tests {
     #[test]
     fn test_dasha_lord_for_nakshatra_sequence() {
         // First 9 nakshatras map directly to SEQUENCE
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Ashwini), DashaLord::Ketu);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Bharani), DashaLord::Venus);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Krittika), DashaLord::Sun);
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Ashwini),
+            DashaLord::Ketu
+        );
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Bharani),
+            DashaLord::Venus
+        );
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Krittika),
+            DashaLord::Sun
+        );
         assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Rohini), DashaLord::Moon);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Mrigashira), DashaLord::Mars);
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Mrigashira),
+            DashaLord::Mars
+        );
         assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Ardra), DashaLord::Rahu);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Punarvasu), DashaLord::Jupiter);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Pushya), DashaLord::Saturn);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Ashlesha), DashaLord::Mercury);
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Punarvasu),
+            DashaLord::Jupiter
+        );
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Pushya),
+            DashaLord::Saturn
+        );
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Ashlesha),
+            DashaLord::Mercury
+        );
 
         // Cycle repeats for next 9 nakshatras
         assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Magha), DashaLord::Ketu);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::PurvaPhalguni), DashaLord::Venus);
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::PurvaPhalguni),
+            DashaLord::Venus
+        );
 
         // And again for last 9
         assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Mula), DashaLord::Ketu);
-        assert_eq!(dasha_lord_for_nakshatra(Nakshatra::Revati), DashaLord::Mercury);
+        assert_eq!(
+            dasha_lord_for_nakshatra(Nakshatra::Revati),
+            DashaLord::Mercury
+        );
     }
 
     #[test]

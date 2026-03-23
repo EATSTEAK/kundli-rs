@@ -169,7 +169,10 @@ fn derive_d9_chart_rejects_non_whole_sign_house_systems() {
 
     let error = derive_d9_chart(&astro, &config).unwrap_err();
 
-    assert_eq!(error, DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal));
+    assert_eq!(
+        error,
+        DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal)
+    );
 }
 
 #[test]

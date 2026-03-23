@@ -23,7 +23,8 @@ pub fn derive_planet_placements(
     astro: &AstroResult,
     config: &KundliConfig,
 ) -> Result<Vec<PlanetPlacement>, DeriveError> {
-    astro.bodies
+    astro
+        .bodies
         .iter()
         .map(|body| {
             let longitude = normalize_longitude(body.longitude)?;
@@ -54,7 +55,8 @@ pub fn derive_houses(
         HouseSystem::WholeSign => {
             let ascendant_longitude = normalize_longitude(astro.ascendant_longitude)?;
             // WholeSign houses are anchored to sign boundaries, not the literal ascendant degree.
-            let first_house_cusp = (ascendant_longitude / DEGREES_PER_SIGN).floor() * DEGREES_PER_SIGN;
+            let first_house_cusp =
+                (ascendant_longitude / DEGREES_PER_SIGN).floor() * DEGREES_PER_SIGN;
 
             (0..NUM_HOUSES)
                 .map(|index| {
@@ -74,7 +76,8 @@ pub fn derive_houses(
                 return Err(DeriveError::InvalidHouseCusps(astro.house_cusps.len()));
             }
 
-            astro.house_cusps
+            astro
+                .house_cusps
                 .iter()
                 .enumerate()
                 .map(|(index, &cusp)| {

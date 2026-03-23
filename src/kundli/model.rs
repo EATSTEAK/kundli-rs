@@ -55,7 +55,9 @@ impl Pada {
     pub const MAX: u8 = 4;
 
     pub fn new(value: u8) -> Option<Self> {
-        (Self::MIN..=Self::MAX).contains(&value).then_some(Self(value))
+        (Self::MIN..=Self::MAX)
+            .contains(&value)
+            .then_some(Self(value))
     }
 }
 
@@ -74,7 +76,9 @@ impl HouseNumber {
     pub const MAX: u8 = 12;
 
     pub fn new(value: u8) -> Option<Self> {
-        (Self::MIN..=Self::MAX).contains(&value).then_some(Self(value))
+        (Self::MIN..=Self::MAX)
+            .contains(&value)
+            .then_some(Self(value))
     }
 }
 

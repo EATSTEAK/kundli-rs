@@ -20,16 +20,25 @@ impl fmt::Display for DeriveError {
                 write!(f, "expected 12 house cusps, got {count}")
             }
             Self::InvalidLongitude(longitude) => {
-                write!(f, "invalid longitude: {longitude}; expected a finite degree value")
+                write!(
+                    f,
+                    "invalid longitude: {longitude}; expected a finite degree value"
+                )
             }
             Self::InvalidPada(value) => {
                 write!(f, "invalid pada value: {value}; expected a value in 1..=4")
             }
             Self::UnsupportedZodiac(zodiac) => {
-                write!(f, "unsupported zodiac for derive operation: {zodiac:?}; expected sidereal data")
+                write!(
+                    f,
+                    "unsupported zodiac for derive operation: {zodiac:?}; expected sidereal data"
+                )
             }
             Self::UnsupportedD9HouseSystem(house_system) => {
-                write!(f, "unsupported D9 house system: {house_system:?}; expected WholeSign")
+                write!(
+                    f,
+                    "unsupported D9 house system: {house_system:?}; expected WholeSign"
+                )
             }
         }
     }
