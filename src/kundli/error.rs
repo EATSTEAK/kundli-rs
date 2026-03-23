@@ -55,6 +55,9 @@ impl fmt::Display for DeriveError {
 impl std::error::Error for DeriveError {}
 
 /// Duplicated settings that must match between the request and config.
+///
+/// Consumers can pattern match this enum to identify which public input field
+/// needs to be aligned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputConfigMismatchField {
     /// `request.zodiac` and `config.zodiac` disagreed.

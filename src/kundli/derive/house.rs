@@ -128,6 +128,12 @@ const _: () = {
 mod tests {
     use super::*;
 
+    #[test]
+    fn checked_constructor_rejects_invalid_house_number() {
+        assert_eq!(HouseNumber::new(0), None);
+        assert_eq!(HouseNumber::new(13), None);
+    }
+
     fn house(number: u8) -> HouseNumber {
         HouseNumber::new(number).unwrap()
     }

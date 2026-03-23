@@ -143,25 +143,30 @@ derive가 실제로 사용하는 필드는 다음과 같다.
 
 ### 4.2 KundliConfig
 
-`src/kundli/config.rs:3-10`
+`src/kundli/config.rs:1-101`
+
+현재 `KundliConfig`는 여전히 duplicated astro settings를 보존하지만, 권장 조립 경로는 struct literal보다 생성 메서드다.
 
 ```rust
-pub struct KundliConfig {
-    pub zodiac: ZodiacType,
-    pub ayanamsha: Ayanamsha,
-    pub house_system: HouseSystem,
-    pub node_type: NodeType,
-    pub include_d9: bool,
-    pub include_dasha: bool,
-}
+let request = AstroRequest::new(jd_ut, latitude, longitude, bodies)
+    .with_zodiac(zodiac)
+    .with_ayanamsha(ayanamsha)
+    .with_house_system(house_system)
+    .with_node_type(node_type);
+
+let config = KundliConfig::from_request(&request)
+    .with_include_d9(true)
+    .with_include_dasha(true);
 ```
+
+이 패턴의 핵심 의도는 request/config에 중복된 zodiac-related 설정이 처음부터 일치하도록 만드는 것이다.
 
 현재 derive 레이어에서 직접 의미가 있는 값은 주로 `house_system`이다.
 
 - D1: `house_system`에 따라 WholeSign / cusp 기반 분기
 - D9: `house_system == WholeSign`인지 검증
 
-`include_d9`, `include_dasha`는 현재 derive 함수 내부에서는 소비되지 않는다. 이 값들은 향후 상위 orchestration에서 의미를 가질 구조다. 현재 확인 가능한 사용처는 테스트의 config 조립 코드뿐이다 (`tests/astro_smoke.rs:103`).
+`include_d9`, `include_dasha`는 현재 derive 함수 내부에서는 소비되지 않는다. 이 값들은 상위 orchestration에서 의미를 가진다.
 
 ### 4.3 결과 모델
 
@@ -181,9 +186,9 @@ pub struct KundliConfig {
 
 ### 4.4 에러 계약
 
-`src/kundli/error.rs:5-13`
+`src/kundli/error.rs:5-129`
 
-현재 derive 전용 에러는 다음과 같다.
+derive 전용 에러는 다음과 같다.
 
 - `MissingMoon`
 - `InvalidHouseCusps(usize)`
@@ -200,6 +205,15 @@ pub struct KundliConfig {
 - `InvalidPada`: pada 생성 불가
 - `UnsupportedZodiac`: D9 / Dasha가 sidereal만 허용할 때 tropical 입력이 들어온 경우
 - `UnsupportedD9HouseSystem`: D9에서 WholeSign 외 house system이 들어온 경우
+
+추가로 high-level API는 `KundliError::InputConfigMismatch(InputConfigMismatchField)`를 통해 request/config 불일치를 typed하게 노출한다.
+
+- `InputConfigMismatchField::Zodiac`
+- `InputConfigMismatchField::Ayanamsha`
+- `InputConfigMismatchField::HouseSystem`
+- `InputConfigMismatchField::NodeType`
+
+즉, 소비자는 에러 문자열 파싱 대신 enum pattern match로 어떤 public field가 어긋났는지 식별할 수 있다.
 
 ---
 
