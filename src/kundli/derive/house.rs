@@ -52,7 +52,7 @@ fn derive_house_whole_sign(
 
     // Safety: house_number is always in range 1-12 due to modulo
     debug_assert!((1..=12).contains(&house_number));
-    Ok(HouseNumber(house_number as u8))
+    Ok(HouseNumber::new(house_number as u8).expect("whole-sign derived house must stay within 1..=12"))
 }
 
 /// Derives house placement using house cusps.
@@ -85,7 +85,8 @@ fn derive_house_from_cusps(
         let cusp_end = normalize_longitude(house_cusps[(i + 1) % NUM_HOUSES])?;
 
         if is_in_house(planet_lon, cusp_start, cusp_end) {
-            return Ok(HouseNumber((i + 1) as u8));
+            return Ok(HouseNumber::new((i + 1) as u8)
+                .expect("cusp-derived house must stay within 1..=12"));
         }
     }
 
@@ -127,77 +128,81 @@ const _: () = {
 mod tests {
     use super::*;
 
+    fn house(number: u8) -> HouseNumber {
+        HouseNumber::new(number).unwrap()
+    }
+
     #[test]
     fn whole_sign_same_sign_as_ascendant_is_house_1() {
         // Ascendant at 15 degrees Aries (sign 0), planet at 20 degrees Aries
-        let house = derive_house(20.0, 15.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(1));
+        let house_number = derive_house(20.0, 15.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(1));
     }
 
     #[test]
     fn whole_sign_next_sign_is_house_2() {
         // Ascendant at 15 degrees Aries (sign 0), planet at 10 degrees Taurus (sign 1)
-        let house = derive_house(40.0, 15.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(2));
+        let house_number = derive_house(40.0, 15.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(2));
     }
 
     #[test]
     fn whole_sign_previous_sign_is_house_12() {
         // Ascendant at 15 degrees Aries (sign 0), planet at 10 degrees Pisces (sign 11)
-        let house = derive_house(350.0, 15.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(12));
+        let house_number = derive_house(350.0, 15.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(12));
     }
 
     #[test]
     fn whole_sign_multiple_houses_away() {
         // Ascendant at 5 degrees Aries (sign 0), planet at 95 degrees Cancer (sign 3)
-        let house = derive_house(95.0, 5.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(4));
+        let house_number = derive_house(95.0, 5.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(4));
     }
 
     #[test]
     fn whole_sign_at_sign_boundary() {
         // Ascendant at 0 degrees Aries, planet at exactly 30 degrees (0 Taurus)
-        let house = derive_house(30.0, 0.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(2));
+        let house_number = derive_house(30.0, 0.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(2));
     }
 
     #[test]
     fn whole_sign_with_negative_longitude() {
         // Ascendant at 15 degrees, planet at -10 degrees (equivalent to 350 degrees)
-        let house = derive_house(-10.0, 15.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(12));
+        let house_number = derive_house(-10.0, 15.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(12));
     }
 
     #[test]
     fn cusp_based_planet_in_first_house() {
         // Simple case: cusps start at 0, 30, 60, etc. (Equal house)
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
-        let house = derive_house(15.0, 0.0, &cusps, HouseSystem::Equal);
-        assert_eq!(house.unwrap(), HouseNumber(1));
+        let house_number = derive_house(15.0, 0.0, &cusps, HouseSystem::Equal);
+        assert_eq!(house_number.unwrap(), house(1));
     }
 
     #[test]
     fn cusp_based_planet_in_middle_house() {
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
-        let house = derive_house(105.0, 0.0, &cusps, HouseSystem::Equal);
-        assert_eq!(house.unwrap(), HouseNumber(4));
+        let house_number = derive_house(105.0, 0.0, &cusps, HouseSystem::Equal);
+        assert_eq!(house_number.unwrap(), house(4));
     }
 
     #[test]
     fn cusp_based_planet_at_cusp_boundary() {
         // Planet exactly at a cusp belongs to that house
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
-        let house = derive_house(60.0, 0.0, &cusps, HouseSystem::Equal);
-        assert_eq!(house.unwrap(), HouseNumber(3));
+        let house_number = derive_house(60.0, 0.0, &cusps, HouseSystem::Equal);
+        assert_eq!(house_number.unwrap(), house(3));
     }
 
     #[test]
     fn cusp_based_wrap_around_last_house() {
         // House 12 spans from 330 to 360/0 degrees
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
-        let house = derive_house(345.0, 0.0, &cusps, HouseSystem::Equal);
-        assert_eq!(house.unwrap(), HouseNumber(12));
+        let house_number = derive_house(345.0, 0.0, &cusps, HouseSystem::Equal);
+        assert_eq!(house_number.unwrap(), house(12));
     }
 
     #[test]
@@ -207,15 +212,15 @@ mod tests {
             300.0, 330.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0,
         ];
         // Planet at 350 degrees should be in house 2 (330-0)
-        let house = derive_house(350.0, 300.0, &cusps, HouseSystem::Placidus);
-        assert_eq!(house.unwrap(), HouseNumber(2));
+        let house_number = derive_house(350.0, 300.0, &cusps, HouseSystem::Placidus);
+        assert_eq!(house_number.unwrap(), house(2));
     }
 
     #[test]
     fn non_whole_sign_validates_ascendant_longitude() {
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
-        let house = derive_house(15.0, f64::NAN, &cusps, HouseSystem::Equal);
-        assert!(matches!(house, Err(DeriveError::InvalidLongitude(value)) if value.is_nan()));
+        let house_number = derive_house(15.0, f64::NAN, &cusps, HouseSystem::Equal);
+        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(value)) if value.is_nan()));
     }
 
     #[test]
@@ -225,33 +230,33 @@ mod tests {
             300.0, 330.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0,
         ];
         // Planet at 5 degrees should be in house 3 (cusp at 0 to cusp at 30)
-        let house = derive_house(5.0, 300.0, &cusps, HouseSystem::Placidus);
-        assert_eq!(house.unwrap(), HouseNumber(3));
+        let house_number = derive_house(5.0, 300.0, &cusps, HouseSystem::Placidus);
+        assert_eq!(house_number.unwrap(), house(3));
     }
 
     #[test]
     fn invalid_longitude_returns_error() {
-        let house = derive_house(f64::NAN, 15.0, &[], HouseSystem::WholeSign);
-        assert!(matches!(house, Err(DeriveError::InvalidLongitude(_))));
+        let house_number = derive_house(f64::NAN, 15.0, &[], HouseSystem::WholeSign);
+        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
     }
 
     #[test]
     fn infinite_longitude_returns_error() {
-        let house = derive_house(f64::INFINITY, 15.0, &[], HouseSystem::WholeSign);
-        assert!(matches!(house, Err(DeriveError::InvalidLongitude(_))));
+        let house_number = derive_house(f64::INFINITY, 15.0, &[], HouseSystem::WholeSign);
+        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
     }
 
     #[test]
     fn wrong_number_of_cusps_returns_error() {
         let cusps = vec![0.0, 30.0, 60.0]; // Only 3 cusps
-        let house = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
-        assert!(matches!(house, Err(DeriveError::InvalidHouseCusps(3))));
+        let house_number = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
+        assert!(matches!(house_number, Err(DeriveError::InvalidHouseCusps(3))));
     }
 
     #[test]
     fn empty_cusps_returns_error() {
-        let house = derive_house(45.0, 0.0, &[], HouseSystem::Equal);
-        assert!(matches!(house, Err(DeriveError::InvalidHouseCusps(0))));
+        let house_number = derive_house(45.0, 0.0, &[], HouseSystem::Equal);
+        assert!(matches!(house_number, Err(DeriveError::InvalidHouseCusps(0))));
     }
 
     #[test]
@@ -270,8 +275,8 @@ mod tests {
             300.0,
             330.0,
         ];
-        let house = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
-        assert!(matches!(house, Err(DeriveError::InvalidLongitude(_))));
+        let house_number = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
+        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
     }
 
     #[test]
@@ -293,8 +298,8 @@ mod tests {
     #[test]
     fn whole_sign_with_large_longitude() {
         // Planet at 725 degrees = 5 degrees Aries after normalization.
-        let house = derive_house(725.0, 15.0, &[], HouseSystem::WholeSign);
-        assert_eq!(house.unwrap(), HouseNumber(1));
+        let house_number = derive_house(725.0, 15.0, &[], HouseSystem::WholeSign);
+        assert_eq!(house_number.unwrap(), house(1));
     }
 
     #[test]
@@ -304,13 +309,8 @@ mod tests {
         for house_num in 1..=12 {
             let planet_sign = house_num - 1; // 0-indexed sign
             let planet_lon = (planet_sign as f64) * 30.0 + 15.0; // Middle of each sign
-            let house = derive_house(planet_lon, 0.0, &[], HouseSystem::WholeSign);
-            assert_eq!(
-                house.unwrap(),
-                HouseNumber(house_num),
-                "Failed for house {}",
-                house_num
-            );
+            let house_number = derive_house(planet_lon, 0.0, &[], HouseSystem::WholeSign);
+            assert_eq!(house_number.unwrap(), house(house_num), "Failed for house {}", house_num);
         }
     }
 }

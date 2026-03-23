@@ -11,7 +11,7 @@ use crate::kundli::config::KundliConfig;
 use crate::kundli::derive::d1::derive_d1_chart;
 use crate::kundli::derive::d9::derive_d9_chart;
 use crate::kundli::derive::dasha::derive_vimshottari_dasha;
-use crate::kundli::error::KundliError;
+use crate::kundli::error::{InputConfigMismatchField, KundliError};
 use crate::kundli::model::{CalculationMeta, KundliResult};
 
 /// Calculates a complete kundli using the default Swiss Ephemeris-backed
@@ -89,25 +89,25 @@ fn validate_request_matches_config(
 ) -> Result<(), KundliError> {
     if request.zodiac != config.zodiac {
         return Err(KundliError::InputConfigMismatch(
-            "request.zodiac must match config.zodiac",
+            InputConfigMismatchField::Zodiac,
         ));
     }
 
     if request.ayanamsha != config.ayanamsha {
         return Err(KundliError::InputConfigMismatch(
-            "request.ayanamsha must match config.ayanamsha",
+            InputConfigMismatchField::Ayanamsha,
         ));
     }
 
     if request.house_system != config.house_system {
         return Err(KundliError::InputConfigMismatch(
-            "request.house_system must match config.house_system",
+            InputConfigMismatchField::HouseSystem,
         ));
     }
 
     if request.node_type != config.node_type {
         return Err(KundliError::InputConfigMismatch(
-            "request.node_type must match config.node_type",
+            InputConfigMismatchField::NodeType,
         ));
     }
 
@@ -148,24 +148,18 @@ mod tests {
     }
 
     fn sample_request() -> AstroRequest {
-        AstroRequest {
-            jd_ut: 2451545.0,
-            latitude: 37.5665,
-            longitude: 126.9780,
-            zodiac: ZodiacType::Sidereal,
-            ayanamsha: Ayanamsha::Lahiri,
-            house_system: HouseSystem::WholeSign,
-            node_type: NodeType::True,
-            bodies: vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
-        }
+        AstroRequest::new(
+            2451545.0,
+            37.5665,
+            126.9780,
+            vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
+        )
     }
 
-    fn sample_config() -> KundliConfig {
-        KundliConfig {
-            include_d9: true,
-            include_dasha: true,
-            ..KundliConfig::default()
-        }
+    fn sample_config(request: &AstroRequest) -> KundliConfig {
+        KundliConfig::from_request(request)
+            .with_include_d9(true)
+            .with_include_dasha(true)
     }
 
     fn sample_astro() -> AstroResult {
@@ -209,7 +203,7 @@ mod tests {
     #[test]
     fn calculate_with_engine_assembles_full_kundli_result() {
         let request = sample_request();
-        let config = sample_config();
+        let config = sample_config(&request);
         let engine = StubEngine {
             result: Ok(sample_astro()),
         };
@@ -235,7 +229,7 @@ mod tests {
     #[test]
     fn calculate_with_engine_omits_optional_results_when_disabled() {
         let request = sample_request();
-        let config = KundliConfig::default();
+        let config = KundliConfig::from_request(&request);
         let engine = StubEngine {
             result: Ok(sample_astro()),
         };
@@ -249,10 +243,7 @@ mod tests {
     #[test]
     fn calculate_with_engine_rejects_request_config_mismatch() {
         let request = sample_request();
-        let config = KundliConfig {
-            house_system: HouseSystem::Equal,
-            ..sample_config()
-        };
+        let config = sample_config(&request).with_house_system(HouseSystem::Equal);
         let engine = StubEngine {
             result: Ok(sample_astro()),
         };
@@ -261,7 +252,7 @@ mod tests {
 
         assert_eq!(
             error,
-            KundliError::InputConfigMismatch("request.house_system must match config.house_system",)
+            KundliError::InputConfigMismatch(InputConfigMismatchField::HouseSystem)
         );
     }
 
@@ -273,7 +264,7 @@ mod tests {
             result: Ok(sample_astro()),
         };
 
-        let error = calculate_kundli_with_engine(&engine, &request, &sample_config()).unwrap_err();
+        let error = calculate_kundli_with_engine(&engine, &request, &sample_config(&request)).unwrap_err();
 
         assert!(matches!(
             error,

@@ -76,7 +76,8 @@ pub(crate) fn derive_houses_from_input(
                         normalize_longitude(first_house_cusp + index as f64 * DEGREES_PER_SIGN)?;
 
                     Ok(HouseResult {
-                        house: HouseNumber((index + 1) as u8),
+                        house: HouseNumber::new((index + 1) as u8)
+                            .expect("whole-sign house index must stay within 1..=12"),
                         cusp_longitude,
                         sign: sign_from_longitude(cusp_longitude)?,
                     })
@@ -96,7 +97,8 @@ pub(crate) fn derive_houses_from_input(
                     let cusp_longitude = normalize_longitude(cusp)?;
 
                     Ok(HouseResult {
-                        house: HouseNumber((index + 1) as u8),
+                        house: HouseNumber::new((index + 1) as u8)
+                            .expect("cusp house index must stay within 1..=12"),
                         cusp_longitude,
                         sign: sign_from_longitude(cusp_longitude)?,
                     })

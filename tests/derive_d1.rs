@@ -10,6 +10,10 @@ use kundli_rs::kundli::model::{HouseNumber, Nakshatra, Pada, Sign};
 
 const EPSILON: f64 = 1e-10;
 
+fn house(number: u8) -> HouseNumber {
+    HouseNumber::new(number).unwrap()
+}
+
 fn sample_meta() -> AstroMeta {
     AstroMeta {
         jd_ut: 2451545.0,
@@ -60,10 +64,7 @@ fn derive_d1_chart_whole_sign_derives_lagna_planets_and_houses() {
         house_cusps: vec![],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::WholeSign,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
 
     let chart = derive_d1_chart(&astro, &config).unwrap();
 
@@ -83,27 +84,27 @@ fn derive_d1_chart_whole_sign_derives_lagna_planets_and_houses() {
     let sun = &chart.planets[0];
     assert_eq!(sun.sign, Sign::Taurus);
     assert!((sun.degrees_in_sign - 20.0).abs() < EPSILON);
-    assert_eq!(sun.house, HouseNumber(1));
+    assert_eq!(sun.house, house(1));
     assert!(!sun.is_retrograde);
 
     let moon = &chart.planets[1];
     assert_eq!(moon.sign, Sign::Aries);
     assert!((moon.degrees_in_sign - 5.0).abs() < EPSILON);
-    assert_eq!(moon.house, HouseNumber(12));
+    assert_eq!(moon.house, house(12));
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Ashwini);
     assert_eq!(moon.nakshatra.pada, Pada::new(2).unwrap());
 
     let saturn = &chart.planets[2];
     assert_eq!(saturn.sign, Sign::Cancer);
     assert!((saturn.degrees_in_sign - 5.0).abs() < EPSILON);
-    assert_eq!(saturn.house, HouseNumber(3));
+    assert_eq!(saturn.house, house(3));
     assert!(saturn.is_retrograde);
 
     assert_eq!(chart.houses.len(), 12);
-    assert_eq!(chart.houses[0].house, HouseNumber(1));
+    assert_eq!(chart.houses[0].house, house(1));
     assert_eq!(chart.houses[0].sign, Sign::Taurus);
     assert!((chart.houses[0].cusp_longitude - 30.0).abs() < EPSILON);
-    assert_eq!(chart.houses[11].house, HouseNumber(12));
+    assert_eq!(chart.houses[11].house, house(12));
     assert_eq!(chart.houses[11].sign, Sign::Aries);
     assert!(chart.houses[11].cusp_longitude.abs() < EPSILON);
 }
@@ -119,23 +120,20 @@ fn derive_planet_placements_and_houses_use_cusps_for_non_whole_sign_systems() {
         ],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::Equal,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::Equal);
 
     let planets = derive_planet_placements(&astro, &config).unwrap();
     let houses = derive_houses(&astro, &config).unwrap();
 
     assert_eq!(planets.len(), 1);
     assert_eq!(planets[0].sign, Sign::Gemini);
-    assert_eq!(planets[0].house, HouseNumber(1));
+    assert_eq!(planets[0].house, house(1));
 
     assert_eq!(houses.len(), 12);
-    assert_eq!(houses[0].house, HouseNumber(1));
+    assert_eq!(houses[0].house, house(1));
     assert_eq!(houses[0].sign, Sign::Taurus);
     assert!((houses[0].cusp_longitude - 45.0).abs() < EPSILON);
-    assert_eq!(houses[11].house, HouseNumber(12));
+    assert_eq!(houses[11].house, house(12));
     assert_eq!(houses[11].sign, Sign::Aries);
     assert!((houses[11].cusp_longitude - 15.0).abs() < EPSILON);
 }
@@ -164,10 +162,7 @@ fn derive_planet_placements_returns_error_for_invalid_body_longitude() {
         house_cusps: vec![],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::WholeSign,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
 
     let error = derive_planet_placements(&astro, &config).unwrap_err();
 
@@ -183,10 +178,7 @@ fn derive_houses_returns_error_for_invalid_ascendant_in_whole_sign() {
         house_cusps: vec![],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::WholeSign,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
 
     let error = derive_houses(&astro, &config).unwrap_err();
 
@@ -202,10 +194,7 @@ fn derive_d1_chart_returns_error_for_invalid_cusp_count() {
         house_cusps: vec![0.0, 30.0, 60.0],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::Placidus,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::Placidus);
 
     let error = derive_d1_chart(&astro, &config).unwrap_err();
 

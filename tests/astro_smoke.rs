@@ -89,27 +89,22 @@ fn to_node_type(node_type: &str) -> NodeType {
 }
 
 fn build_request(fixture: &SmokeFixture) -> AstroRequest {
-    AstroRequest {
-        jd_ut: fixture.jd_ut,
-        latitude: fixture.latitude,
-        longitude: fixture.longitude,
-        zodiac: to_zodiac(&fixture.zodiac),
-        ayanamsha: to_ayanamsha(&fixture.ayanamsha),
-        house_system: to_house_system(&fixture.house_system),
-        node_type: to_node_type(&fixture.node_type),
-        bodies: fixture.bodies.iter().map(|body| to_body(body)).collect(),
-    }
+    AstroRequest::new(
+        fixture.jd_ut,
+        fixture.latitude,
+        fixture.longitude,
+        fixture.bodies.iter().map(|body| to_body(body)).collect(),
+    )
+    .with_zodiac(to_zodiac(&fixture.zodiac))
+    .with_ayanamsha(to_ayanamsha(&fixture.ayanamsha))
+    .with_house_system(to_house_system(&fixture.house_system))
+    .with_node_type(to_node_type(&fixture.node_type))
 }
 
 fn build_config(request: &AstroRequest) -> KundliConfig {
-    KundliConfig {
-        zodiac: request.zodiac,
-        ayanamsha: request.ayanamsha,
-        house_system: request.house_system,
-        node_type: request.node_type,
-        include_d9: true,
-        include_dasha: true,
-    }
+    KundliConfig::from_request(request)
+        .with_include_d9(true)
+        .with_include_dasha(true)
 }
 
 #[test]
@@ -184,12 +179,12 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(
         d1.planets
             .iter()
-            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0))
+            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.get()))
     );
     assert!(
         d9.planets
             .iter()
-            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0))
+            .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.get()))
     );
 }
 
@@ -225,11 +220,9 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
 fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
     let fixture = load_fixture();
     let request = build_request(&fixture);
-    let config = KundliConfig {
-        include_d9: false,
-        include_dasha: false,
-        ..build_config(&request)
-    };
+    let config = build_config(&request)
+        .with_include_d9(false)
+        .with_include_dasha(false);
     let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
 
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();

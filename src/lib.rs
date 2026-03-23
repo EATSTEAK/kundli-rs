@@ -9,27 +9,19 @@
 //!
 //! ```no_run
 //! use kundli_rs::calculate_kundli;
-//! use kundli_rs::kundli::astro::{
-//!     AstroBody, AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType,
-//! };
+//! use kundli_rs::kundli::astro::{AstroBody, AstroRequest};
 //! use kundli_rs::kundli::config::KundliConfig;
 //!
-//! let request = AstroRequest {
-//!     jd_ut: 2451545.0,
-//!     latitude: 37.5665,
-//!     longitude: 126.9780,
-//!     zodiac: ZodiacType::Sidereal,
-//!     ayanamsha: Ayanamsha::Lahiri,
-//!     house_system: HouseSystem::WholeSign,
-//!     node_type: NodeType::True,
-//!     bodies: vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
-//! };
+//! let request = AstroRequest::new(
+//!     2451545.0,
+//!     37.5665,
+//!     126.9780,
+//!     vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
+//! );
 //!
-//! let config = KundliConfig {
-//!     include_d9: true,
-//!     include_dasha: true,
-//!     ..KundliConfig::default()
-//! };
+//! let config = KundliConfig::from_request(&request)
+//!     .with_include_d9(true)
+//!     .with_include_dasha(true);
 //!
 //! let result = calculate_kundli(request, config)?;
 //!
@@ -48,9 +40,9 @@
 //!
 //! [`AstroRequest`](crate::kundli::astro::AstroRequest) and
 //! [`KundliConfig`](crate::kundli::config::KundliConfig) both carry zodiac,
-//! ayanamsha, house-system, and node-type settings. These values must match or
-//! calculation will fail with
-//! [`KundliError::InputConfigMismatch`](crate::kundli::error::KundliError::InputConfigMismatch).
+//! ayanamsha, house-system, and node-type settings. Use
+//! [`KundliConfig::from_request`](crate::kundli::config::KundliConfig::from_request)
+//! when you want those duplicated settings to match by construction.
 
 pub mod kundli;
 

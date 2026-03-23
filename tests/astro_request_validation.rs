@@ -1,8 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use kundli_rs::kundli::astro::{
-    AstroBody, AstroError, AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType,
-};
+use kundli_rs::kundli::astro::{AstroBody, AstroError, AstroRequest};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -34,16 +32,7 @@ fn load_fixture() -> CoordinateValidationFixture {
 }
 
 fn sample_request() -> AstroRequest {
-    AstroRequest {
-        jd_ut: 2451545.0,
-        latitude: 37.5665,
-        longitude: 126.978,
-        zodiac: ZodiacType::Sidereal,
-        ayanamsha: Ayanamsha::Lahiri,
-        house_system: HouseSystem::WholeSign,
-        node_type: NodeType::True,
-        bodies: vec![AstroBody::Sun],
-    }
+    AstroRequest::new(2451545.0, 37.5665, 126.978, vec![AstroBody::Sun])
 }
 
 #[test]

@@ -51,11 +51,9 @@ pub enum Nakshatra {
 
 /// Nakshatra quarter number.
 ///
-/// Valid values are in the range `1..=4`. The inner field is public, so the
-/// type does not currently enforce this invariant on direct construction. Use
-/// [`Pada::new`] when you want checked construction.
+/// Valid values are in the range `1..=4`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Pada(pub u8);
+pub struct Pada(u8);
 
 impl Pada {
     /// Smallest valid pada value.
@@ -68,6 +66,11 @@ impl Pada {
         (Self::MIN..=Self::MAX)
             .contains(&value)
             .then_some(Self(value))
+    }
+
+    /// Returns the raw one-based pada value.
+    pub const fn get(self) -> u8 {
+        self.0
     }
 }
 
@@ -84,11 +87,9 @@ pub struct NakshatraPlacement {
 
 /// One-based house number.
 ///
-/// Valid values are in the range `1..=12`. The inner field is public, so the
-/// type does not currently enforce this invariant on direct construction. Use
-/// [`HouseNumber::new`] when you want checked construction.
+/// Valid values are in the range `1..=12`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct HouseNumber(pub u8);
+pub struct HouseNumber(u8);
 
 impl HouseNumber {
     /// Smallest valid house number.
@@ -101,6 +102,11 @@ impl HouseNumber {
         (Self::MIN..=Self::MAX)
             .contains(&value)
             .then_some(Self(value))
+    }
+
+    /// Returns the raw one-based house number.
+    pub const fn get(self) -> u8 {
+        self.0
     }
 }
 

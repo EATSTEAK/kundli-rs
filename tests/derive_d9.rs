@@ -9,6 +9,10 @@ use kundli_rs::kundli::model::{HouseNumber, Nakshatra, Pada, Sign};
 const EPSILON: f64 = 1e-10;
 const NAVAMSA_BOUNDARY: f64 = 10.0 / 3.0;
 
+fn house(number: u8) -> HouseNumber {
+    HouseNumber::new(number).unwrap()
+}
+
 fn sample_meta() -> AstroMeta {
     AstroMeta {
         jd_ut: 2451545.0,
@@ -42,10 +46,7 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
         house_cusps: vec![],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::WholeSign,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
 
     let chart = derive_d9_chart(&astro, &config).unwrap();
 
@@ -57,14 +58,14 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert_eq!(sun.sign, Sign::Leo);
     assert!((sun.longitude - 135.0).abs() < EPSILON);
     assert!((sun.degrees_in_sign - 15.0).abs() < EPSILON);
-    assert_eq!(sun.house, HouseNumber(4));
+    assert_eq!(sun.house, house(4));
     assert!(!sun.is_retrograde);
 
     let moon = &chart.planets[1];
     assert_eq!(moon.sign, Sign::Aries);
     assert!(moon.longitude.abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
-    assert_eq!(moon.house, HouseNumber(12));
+    assert_eq!(moon.house, house(12));
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Ashwini);
     assert_eq!(moon.nakshatra.pada, Pada::new(1).unwrap());
 
@@ -72,7 +73,7 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert_eq!(saturn.sign, Sign::Capricorn);
     assert!((saturn.longitude - 288.0).abs() < EPSILON);
     assert!((saturn.degrees_in_sign - 18.0).abs() < EPSILON);
-    assert_eq!(saturn.house, HouseNumber(9));
+    assert_eq!(saturn.house, house(9));
     assert!(saturn.is_retrograde);
 }
 
@@ -96,19 +97,19 @@ fn derive_d9_chart_handles_navamsa_boundaries_across_sign_modalities() {
     assert_eq!(sun.sign, Sign::Taurus);
     assert!((sun.longitude - 30.0).abs() < EPSILON);
     assert!(sun.degrees_in_sign.abs() < EPSILON);
-    assert_eq!(sun.house, HouseNumber(2));
+    assert_eq!(sun.house, house(2));
 
     let moon = &chart.planets[1];
     assert_eq!(moon.sign, Sign::Capricorn);
     assert!((moon.longitude - 270.0).abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
-    assert_eq!(moon.house, HouseNumber(10));
+    assert_eq!(moon.house, house(10));
 
     let mercury = &chart.planets[2];
     assert_eq!(mercury.sign, Sign::Libra);
     assert!((mercury.longitude - 180.0).abs() < EPSILON);
     assert!(mercury.degrees_in_sign.abs() < EPSILON);
-    assert_eq!(mercury.house, HouseNumber(7));
+    assert_eq!(mercury.house, house(7));
 }
 
 #[test]
@@ -120,10 +121,7 @@ fn derive_d9_chart_rejects_non_whole_sign_house_systems() {
         house_cusps: vec![0.0, 30.0, 60.0],
         meta: sample_meta(),
     };
-    let config = KundliConfig {
-        house_system: HouseSystem::Equal,
-        ..KundliConfig::default()
-    };
+    let config = KundliConfig::default().with_house_system(HouseSystem::Equal);
 
     let error = derive_d9_chart(&astro, &config).unwrap_err();
 

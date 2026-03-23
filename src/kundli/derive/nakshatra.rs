@@ -292,20 +292,20 @@ mod tests {
     #[test]
     fn test_pada_from_longitude_boundaries() {
         // Pada 1: 0 - 3.333...
-        assert_eq!(pada_from_longitude(0.0).unwrap().0, 1);
-        assert_eq!(pada_from_longitude(3.3).unwrap().0, 1);
+        assert_eq!(pada_from_longitude(0.0).unwrap().get(), 1);
+        assert_eq!(pada_from_longitude(3.3).unwrap().get(), 1);
 
         // Pada 2: 3.333... - 6.666...
-        assert_eq!(pada_from_longitude(3.4).unwrap().0, 2);
-        assert_eq!(pada_from_longitude(6.5).unwrap().0, 2);
+        assert_eq!(pada_from_longitude(3.4).unwrap().get(), 2);
+        assert_eq!(pada_from_longitude(6.5).unwrap().get(), 2);
 
         // Pada 3: 6.666... - 10.0
-        assert_eq!(pada_from_longitude(6.7).unwrap().0, 3);
-        assert_eq!(pada_from_longitude(9.9).unwrap().0, 3);
+        assert_eq!(pada_from_longitude(6.7).unwrap().get(), 3);
+        assert_eq!(pada_from_longitude(9.9).unwrap().get(), 3);
 
         // Pada 4: 10.0 - 13.333...
-        assert_eq!(pada_from_longitude(10.0).unwrap().0, 4);
-        assert_eq!(pada_from_longitude(13.2).unwrap().0, 4);
+        assert_eq!(pada_from_longitude(10.0).unwrap().get(), 4);
+        assert_eq!(pada_from_longitude(13.2).unwrap().get(), 4);
     }
 
     #[test]
@@ -319,10 +319,10 @@ mod tests {
         // Pada 4: 10.0 - 13.333
         for i in 0..27 {
             let base = DEGREES_PER_NAKSHATRA * (i as f64) + 0.1; // Small offset from boundary
-            assert_eq!(pada_from_longitude(base).unwrap().0, 1); // 0.1 is in pada 1
-            assert_eq!(pada_from_longitude(base + 3.5).unwrap().0, 2); // 3.6 is in pada 2
-            assert_eq!(pada_from_longitude(base + 7.0).unwrap().0, 3); // 7.1 is in pada 3
-            assert_eq!(pada_from_longitude(base + 10.5).unwrap().0, 4); // 10.6 is in pada 4
+            assert_eq!(pada_from_longitude(base).unwrap().get(), 1); // 0.1 is in pada 1
+            assert_eq!(pada_from_longitude(base + 3.5).unwrap().get(), 2); // 3.6 is in pada 2
+            assert_eq!(pada_from_longitude(base + 7.0).unwrap().get(), 3); // 7.1 is in pada 3
+            assert_eq!(pada_from_longitude(base + 10.5).unwrap().get(), 4); // 10.6 is in pada 4
         }
     }
 

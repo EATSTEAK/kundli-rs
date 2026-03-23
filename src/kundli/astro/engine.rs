@@ -82,24 +82,20 @@ impl AstroEngine for SwissEphAstroEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kundli::astro::{AstroBody, Ayanamsha, HouseSystem, NodeType, ZodiacType};
+    use crate::kundli::astro::AstroBody;
 
     fn sample_request() -> AstroRequest {
-        AstroRequest {
-            jd_ut: 2451545.0,
-            latitude: 37.5665,
-            longitude: 126.978,
-            zodiac: ZodiacType::Sidereal,
-            ayanamsha: Ayanamsha::Lahiri,
-            house_system: HouseSystem::WholeSign,
-            node_type: NodeType::True,
-            bodies: vec![
+        AstroRequest::new(
+            2451545.0,
+            37.5665,
+            126.978,
+            vec![
                 AstroBody::Sun,
                 AstroBody::Moon,
                 AstroBody::Rahu,
                 AstroBody::Ketu,
             ],
-        }
+        )
     }
 
     #[test]

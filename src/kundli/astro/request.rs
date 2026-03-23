@@ -58,8 +58,8 @@ pub enum AstroBody {
 
 /// Input required to calculate raw astronomical positions.
 ///
-/// The high-level kundli API expects several of these fields to match the
-/// supplied [`crate::kundli::config::KundliConfig`].
+/// Use [`AstroRequest::new`] for the common construction path and the `with_*`
+/// methods to override zodiac-related settings when needed.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroRequest {
     /// Julian day in Universal Time.
@@ -81,6 +81,51 @@ pub struct AstroRequest {
 }
 
 impl AstroRequest {
+    /// Creates a request with the crate's default kundli settings.
+    ///
+    /// Defaults:
+    ///
+    /// - [`ZodiacType::Sidereal`]
+    /// - [`Ayanamsha::Lahiri`]
+    /// - [`HouseSystem::WholeSign`]
+    /// - [`NodeType::True`]
+    pub fn new(jd_ut: f64, latitude: f64, longitude: f64, bodies: Vec<AstroBody>) -> Self {
+        Self {
+            jd_ut,
+            latitude,
+            longitude,
+            zodiac: ZodiacType::Sidereal,
+            ayanamsha: Ayanamsha::Lahiri,
+            house_system: HouseSystem::WholeSign,
+            node_type: NodeType::True,
+            bodies,
+        }
+    }
+
+    /// Returns a copy with a different zodiac mode.
+    pub fn with_zodiac(mut self, zodiac: ZodiacType) -> Self {
+        self.zodiac = zodiac;
+        self
+    }
+
+    /// Returns a copy with a different ayanamsha.
+    pub fn with_ayanamsha(mut self, ayanamsha: Ayanamsha) -> Self {
+        self.ayanamsha = ayanamsha;
+        self
+    }
+
+    /// Returns a copy with a different house system.
+    pub fn with_house_system(mut self, house_system: HouseSystem) -> Self {
+        self.house_system = house_system;
+        self
+    }
+
+    /// Returns a copy with a different node mode.
+    pub fn with_node_type(mut self, node_type: NodeType) -> Self {
+        self.node_type = node_type;
+        self
+    }
+
     /// Validates basic structural constraints on the request.
     ///
     /// This method checks only local input validity:
@@ -122,16 +167,7 @@ mod tests {
     use super::*;
 
     fn sample_request() -> AstroRequest {
-        AstroRequest {
-            jd_ut: 2451545.0,
-            latitude: 37.5665,
-            longitude: 126.978,
-            zodiac: ZodiacType::Sidereal,
-            ayanamsha: Ayanamsha::Lahiri,
-            house_system: HouseSystem::WholeSign,
-            node_type: NodeType::True,
-            bodies: vec![AstroBody::Sun, AstroBody::Moon],
-        }
+        AstroRequest::new(2451545.0, 37.5665, 126.978, vec![AstroBody::Sun, AstroBody::Moon])
     }
 
     #[test]

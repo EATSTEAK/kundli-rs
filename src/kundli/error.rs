@@ -54,6 +54,37 @@ impl fmt::Display for DeriveError {
 
 impl std::error::Error for DeriveError {}
 
+/// Duplicated settings that must match between the request and config.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputConfigMismatchField {
+    /// `request.zodiac` and `config.zodiac` disagreed.
+    Zodiac,
+    /// `request.ayanamsha` and `config.ayanamsha` disagreed.
+    Ayanamsha,
+    /// `request.house_system` and `config.house_system` disagreed.
+    HouseSystem,
+    /// `request.node_type` and `config.node_type` disagreed.
+    NodeType,
+}
+
+impl InputConfigMismatchField {
+    const fn field_name(self) -> &'static str {
+        match self {
+            Self::Zodiac => "zodiac",
+            Self::Ayanamsha => "ayanamsha",
+            Self::HouseSystem => "house_system",
+            Self::NodeType => "node_type",
+        }
+    }
+}
+
+impl fmt::Display for InputConfigMismatchField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let field_name = self.field_name();
+        write!(f, "request.{field_name} must match config.{field_name}")
+    }
+}
+
 /// Top-level error returned by high-level kundli calculation entrypoints.
 #[derive(Debug, Clone, PartialEq)]
 pub enum KundliError {
@@ -62,7 +93,7 @@ pub enum KundliError {
     /// A kundli-specific derive step failed.
     Derive(DeriveError),
     /// Settings duplicated between request and config did not match.
-    InputConfigMismatch(&'static str),
+    InputConfigMismatch(InputConfigMismatchField),
 }
 
 impl fmt::Display for KundliError {
@@ -70,7 +101,7 @@ impl fmt::Display for KundliError {
         match self {
             Self::Astro(err) => err.fmt(f),
             Self::Derive(err) => err.fmt(f),
-            Self::InputConfigMismatch(message) => write!(f, "input/config mismatch: {message}"),
+            Self::InputConfigMismatch(field) => write!(f, "input/config mismatch: {field}"),
         }
     }
 }
