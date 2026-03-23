@@ -71,15 +71,15 @@ pub(crate) fn nakshatra_placement_from_longitude(
     })
 }
 
-/// Returns the progress ratio of Moon through the current nakshatra.
+/// Returns the progress ratio through the current nakshatra.
 ///
-/// This is used for Vimshottari dasha calculations to determine
-/// how much of the current dasha period has elapsed.
+/// This is a generic longitude helper that can be reused for any body.
+/// Vimshottari dasha applies it specifically to the Moon.
 /// The ratio is in the range [0.0, 1.0).
 ///
 /// Returns an error if the input is not finite.
 ///
-pub(crate) fn moon_progress_ratio(longitude: f64) -> Result<f64, DeriveError> {
+pub(crate) fn nakshatra_progress_ratio(longitude: f64) -> Result<f64, DeriveError> {
     let normalized = normalize_longitude(longitude)?;
     let degrees = normalized % DEGREES_PER_NAKSHATRA;
     Ok(degrees / DEGREES_PER_NAKSHATRA)
@@ -172,7 +172,7 @@ const _: () = {
     let _ = degrees_in_nakshatra as fn(f64) -> Result<f64, DeriveError>;
     let _ =
         nakshatra_placement_from_longitude as fn(f64) -> Result<NakshatraPlacement, DeriveError>;
-    let _ = moon_progress_ratio as fn(f64) -> Result<f64, DeriveError>;
+    let _ = nakshatra_progress_ratio as fn(f64) -> Result<f64, DeriveError>;
     let _ = dasha_lord_for_nakshatra as fn(Nakshatra) -> DashaLord;
     let _ = nakshatra_from_index as fn(usize) -> Nakshatra;
     let _ = nakshatra_to_index as fn(Nakshatra) -> usize;
@@ -351,37 +351,37 @@ mod tests {
     }
 
     #[test]
-    fn test_moon_progress_ratio_start() {
-        assert!((moon_progress_ratio(0.0).unwrap() - 0.0).abs() < 1e-10);
+    fn test_nakshatra_progress_ratio_start() {
+        assert!((nakshatra_progress_ratio(0.0).unwrap() - 0.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_moon_progress_ratio_middle() {
+    fn test_nakshatra_progress_ratio_middle() {
         let mid_degrees = DEGREES_PER_NAKSHATRA / 2.0;
-        let ratio = moon_progress_ratio(mid_degrees).unwrap();
+        let ratio = nakshatra_progress_ratio(mid_degrees).unwrap();
         assert!((ratio - 0.5).abs() < 1e-10);
     }
 
     #[test]
-    fn test_moon_progress_ratio_end() {
+    fn test_nakshatra_progress_ratio_end() {
         let end_degrees = DEGREES_PER_NAKSHATRA - 0.001;
-        let ratio = moon_progress_ratio(end_degrees).unwrap();
+        let ratio = nakshatra_progress_ratio(end_degrees).unwrap();
         assert!(ratio < 1.0);
         assert!(ratio > 0.99);
     }
 
     #[test]
-    fn test_moon_progress_ratio_across_nakshatras() {
+    fn test_nakshatra_progress_ratio_across_nakshatras() {
         // Progress ratio should reset at each nakshatra boundary
-        let ratio1 = moon_progress_ratio(13.0).unwrap();
-        let ratio2 = moon_progress_ratio(26.5).unwrap();
+        let ratio1 = nakshatra_progress_ratio(13.0).unwrap();
+        let ratio2 = nakshatra_progress_ratio(26.5).unwrap();
         assert!((ratio1 - ratio2).abs() < 0.05); // Both near end of their nakshatras
     }
 
     #[test]
-    fn test_moon_progress_ratio_invalid() {
-        assert!(moon_progress_ratio(f64::NAN).is_err());
-        assert!(moon_progress_ratio(f64::INFINITY).is_err());
+    fn test_nakshatra_progress_ratio_invalid() {
+        assert!(nakshatra_progress_ratio(f64::NAN).is_err());
+        assert!(nakshatra_progress_ratio(f64::INFINITY).is_err());
     }
 
     #[test]

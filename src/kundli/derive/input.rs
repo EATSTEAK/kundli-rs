@@ -1,5 +1,7 @@
 use crate::kundli::astro::{AstroBody, AstroBodyPosition, AstroMeta, AstroResult};
-use crate::kundli::derive::nakshatra::{moon_progress_ratio, nakshatra_placement_from_longitude};
+use crate::kundli::derive::nakshatra::{
+    nakshatra_placement_from_longitude, nakshatra_progress_ratio,
+};
 use crate::kundli::derive::sign::{degrees_in_sign, normalize_longitude, sign_from_longitude};
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{NakshatraPlacement, Sign};
@@ -20,6 +22,8 @@ pub(crate) struct PreparedBody {
     pub sign: Sign,
     pub degrees_in_sign: f64,
     pub nakshatra: NakshatraPlacement,
+    /// Fractional progress within the body's current nakshatra.
+    /// Dasha uses the Moon's value, while D9 recomputes it after Navamsa transformation.
     pub nakshatra_progress_ratio: f64,
     pub is_retrograde: bool,
 }
@@ -83,7 +87,7 @@ fn prepare_body(body: &AstroBodyPosition) -> Result<PreparedBody, DeriveError> {
         sign: sign_from_longitude(longitude)?,
         degrees_in_sign: degrees_in_sign(longitude)?,
         nakshatra: nakshatra_placement_from_longitude(longitude)?,
-        nakshatra_progress_ratio: moon_progress_ratio(longitude)?,
+        nakshatra_progress_ratio: nakshatra_progress_ratio(longitude)?,
         is_retrograde: body.speed_longitude < 0.0,
     })
 }
@@ -102,7 +106,7 @@ fn transform_body_to_navamsa(body: &PreparedBody) -> Result<PreparedBody, Derive
         sign: sign_from_longitude(longitude)?,
         degrees_in_sign: degrees_in_sign(longitude)?,
         nakshatra: nakshatra_placement_from_longitude(longitude)?,
-        nakshatra_progress_ratio: moon_progress_ratio(longitude)?,
+        nakshatra_progress_ratio: nakshatra_progress_ratio(longitude)?,
         is_retrograde: body.is_retrograde,
     })
 }
@@ -226,5 +230,53 @@ mod tests {
         assert!((navamsa.bodies[1].longitude - 288.0).abs() < EPSILON);
         assert_eq!(navamsa.bodies[1].sign, Sign::Capricorn);
         assert!(navamsa.bodies[1].is_retrograde);
+    }
+
+    #[test]
+    fn to_navamsa_recomputes_nakshatra_progress_for_transformed_longitudes() {
+        let astro = AstroResult {
+            bodies: vec![sample_body(AstroBody::Moon, 5.0, 13.0)],
+            ascendant_longitude: 10.0,
+            mc_longitude: 100.0,
+            house_cusps: vec![],
+            meta: sample_meta(),
+        };
+
+        let input = KundliDeriveInput::from_astro(&astro).unwrap();
+        let navamsa = input.to_navamsa().unwrap();
+
+        assert!((input.bodies[0].nakshatra_progress_ratio - 0.375).abs() < EPSILON);
+        assert!((navamsa.bodies[0].longitude - 45.0).abs() < EPSILON);
+        assert!((navamsa.bodies[0].nakshatra_progress_ratio - 0.375).abs() < EPSILON);
+    }
+
+    #[test]
+    fn to_navamsa_returns_error_for_non_finite_body_longitude() {
+        let input = KundliDeriveInput {
+            meta: sample_meta(),
+            ascendant: PreparedAngle {
+                longitude: 45.0,
+                sign: Sign::Taurus,
+                degrees_in_sign: 15.0,
+            },
+            bodies: vec![PreparedBody {
+                body: AstroBody::Sun,
+                longitude: f64::INFINITY,
+                sign: Sign::Aries,
+                degrees_in_sign: 0.0,
+                nakshatra: NakshatraPlacement {
+                    nakshatra: crate::kundli::model::Nakshatra::Ashwini,
+                    pada: crate::kundli::model::Pada::new(1).unwrap(),
+                    degrees_in_nakshatra: 0.0,
+                },
+                nakshatra_progress_ratio: 0.0,
+                is_retrograde: false,
+            }],
+            house_cusps: vec![],
+        };
+
+        let error = input.to_navamsa().unwrap_err();
+
+        assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_infinite()));
     }
 }
