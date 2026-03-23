@@ -46,10 +46,11 @@ impl fmt::Display for DeriveError {
 
 impl std::error::Error for DeriveError {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum KundliError {
     Astro(AstroError),
     Derive(DeriveError),
+    InputConfigMismatch(&'static str),
 }
 
 impl fmt::Display for KundliError {
@@ -57,6 +58,7 @@ impl fmt::Display for KundliError {
         match self {
             Self::Astro(err) => err.fmt(f),
             Self::Derive(err) => err.fmt(f),
+            Self::InputConfigMismatch(message) => write!(f, "input/config mismatch: {message}"),
         }
     }
 }
@@ -66,6 +68,7 @@ impl std::error::Error for KundliError {
         match self {
             Self::Astro(err) => Some(err),
             Self::Derive(err) => Some(err),
+            Self::InputConfigMismatch(_) => None,
         }
     }
 }

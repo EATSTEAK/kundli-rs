@@ -1,4 +1,4 @@
-use crate::kundli::astro::AstroBody;
+use crate::kundli::astro::{AstroBody, Ayanamsha, HouseSystem, NodeType, ZodiacType};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Sign {
@@ -164,4 +164,34 @@ pub struct VimshottariDasha {
     pub moon_nakshatra: Nakshatra,
     pub current_mahadasha: DashaPeriod,
     pub mahadashas: Vec<DashaPeriod>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CalculationMeta {
+    pub jd_ut: f64,
+    pub zodiac: ZodiacType,
+    pub ayanamsha: Ayanamsha,
+    pub ayanamsha_value: Option<f64>,
+    pub house_system: HouseSystem,
+    pub node_type: NodeType,
+    pub sidereal_time: f64,
+    pub body_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CalculationWarning {
+    pub code: &'static str,
+    pub message: &'static str,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct KundliResult {
+    pub meta: CalculationMeta,
+    pub lagna: LagnaResult,
+    pub planets: Vec<PlanetPlacement>,
+    pub houses: Vec<HouseResult>,
+    pub d1: D1Chart,
+    pub d9: Option<D9Chart>,
+    pub dasha: Option<VimshottariDasha>,
+    pub warnings: Vec<CalculationWarning>,
 }

@@ -4,6 +4,7 @@ use kundli_rs::kundli::astro::{
     AstroBody, AstroEngine, AstroRequest, Ayanamsha, HouseSystem, NodeType, SwissEphAstroEngine,
     SwissEphConfig, ZodiacType,
 };
+use kundli_rs::kundli::calculate::calculate_kundli_with_engine;
 use kundli_rs::kundli::config::KundliConfig;
 use kundli_rs::kundli::derive::d1::derive_d1_chart;
 use kundli_rs::kundli::derive::d9::derive_d9_chart;
@@ -189,5 +190,55 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
         d9.planets
             .iter()
             .all(|planet| planet.longitude.is_finite() && (1..=12).contains(&planet.house.0))
+    );
+}
+
+#[test]
+fn smoke_fixture_final_api_matches_manual_pipeline() {
+    let fixture = load_fixture();
+    let request = build_request(&fixture);
+    let config = build_config(&request);
+    let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
+
+    let astro = engine.calculate(&request).unwrap();
+    let manual_d1 = derive_d1_chart(&astro, &config).unwrap();
+    let manual_d9 = derive_d9_chart(&astro, &config).unwrap();
+    let manual_dasha = derive_vimshottari_dasha(&astro).unwrap();
+    let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+
+    assert_eq!(final_result.d1, manual_d1);
+    assert_eq!(final_result.d9, Some(manual_d9));
+    assert_eq!(final_result.dasha, Some(manual_dasha));
+    assert_eq!(final_result.lagna, final_result.d1.lagna);
+    assert_eq!(final_result.planets, final_result.d1.planets);
+    assert_eq!(final_result.houses, final_result.d1.houses);
+    assert_eq!(final_result.meta.jd_ut, request.jd_ut);
+    assert_eq!(final_result.meta.zodiac, request.zodiac);
+    assert_eq!(final_result.meta.ayanamsha, request.ayanamsha);
+    assert_eq!(final_result.meta.house_system, request.house_system);
+    assert_eq!(final_result.meta.node_type, request.node_type);
+    assert_eq!(final_result.meta.body_count, fixture.expected_body_count);
+    assert!(final_result.warnings.is_empty());
+}
+
+#[test]
+fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
+    let fixture = load_fixture();
+    let request = build_request(&fixture);
+    let config = KundliConfig {
+        include_d9: false,
+        include_dasha: false,
+        ..build_config(&request)
+    };
+    let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
+
+    let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+
+    assert!(final_result.d9.is_none());
+    assert!(final_result.dasha.is_none());
+    assert_eq!(final_result.d1.planets.len(), fixture.expected_body_count);
+    assert_eq!(
+        final_result.d1.houses.len(),
+        fixture.expected_house_cusp_count
     );
 }
