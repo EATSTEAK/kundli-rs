@@ -11,6 +11,7 @@ pub struct AstroBodyPosition {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroMeta {
+    pub jd_ut: f64,
     pub zodiac: ZodiacType,
     pub ayanamsha: Ayanamsha,
     pub ayanamsha_value: Option<f64>,

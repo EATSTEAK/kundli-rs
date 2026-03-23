@@ -119,6 +119,7 @@ fn smoke_fixture_returns_requested_bodies_and_house_shape() {
             && position.distance.is_finite()
             && position.speed_longitude.is_finite()
     }));
+    assert_eq!(result.meta.jd_ut, request.jd_ut);
     assert_eq!(
         result.meta.ayanamsha_value.is_some(),
         fixture.expect_ayanamsha_value

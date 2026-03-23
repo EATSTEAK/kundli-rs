@@ -62,6 +62,7 @@ impl AstroEngine for SwissEphAstroEngine {
             mc_longitude: raw.houses.mc,
             house_cusps: raw.houses.cusps.to_vec(),
             meta: AstroMeta {
+                jd_ut: request.jd_ut,
                 zodiac: request.zodiac,
                 ayanamsha: request.ayanamsha,
                 ayanamsha_value: raw.ayanamsha_value,
@@ -97,12 +98,14 @@ mod tests {
     #[test]
     fn calculate_returns_requested_bodies_and_houses() {
         let engine = SwissEphAstroEngine::default();
-        let result = engine.calculate(&sample_request()).unwrap();
+        let request = sample_request();
+        let result = engine.calculate(&request).unwrap();
 
         assert_eq!(result.bodies.len(), 4);
         assert_eq!(result.house_cusps.len(), 12);
         assert!(result.ascendant_longitude >= 0.0);
         assert!(result.mc_longitude >= 0.0);
+        assert_eq!(result.meta.jd_ut, request.jd_ut);
         assert!(result.meta.ayanamsha_value.is_some());
     }
 
