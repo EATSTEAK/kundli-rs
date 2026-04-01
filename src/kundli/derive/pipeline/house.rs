@@ -41,8 +41,8 @@ impl HouseTransformOp<SignContext> for WholeSignHouseTransform {
     type Output = HouseContext;
 
     fn apply(&self, input: &SignContext) -> Result<Self::Output, DeriveError> {
-        let ascendant_house = HouseNumber::new(1).expect("house 1 must be valid");
-        let first_house_cusp = sign_start_longitude(input.ascendant.longitude)?;
+        let ascendant_house = whole_sign_house(input.reference.longitude, input.ascendant.longitude)?;
+        let first_house_cusp = sign_start_longitude(input.reference.longitude)?;
 
         Ok(HouseContext {
             ascendant: input.ascendant.clone(),
@@ -52,7 +52,7 @@ impl HouseTransformOp<SignContext> for WholeSignHouseTransform {
                 .iter()
                 .map(|placement| {
                     Ok(HousedPlacement {
-                        house: whole_sign_house(input.ascendant.longitude, placement.longitude)?,
+                        house: whole_sign_house(input.reference.longitude, placement.longitude)?,
                         placement: placement.clone(),
                     })
                 })
@@ -87,15 +87,19 @@ impl HouseTransformOp<SignContext> for CuspBasedHouseTransform {
             return Err(DeriveError::InvalidHouseCusps(input.house_cusps.len()));
         }
 
+        let first_house = derive_house_from_cusps(input.reference.longitude, &input.house_cusps)?;
+        let ascendant_house = derive_house_from_cusps(input.ascendant.longitude, &input.house_cusps)?;
+
         Ok(HouseContext {
             ascendant: input.ascendant.clone(),
-            ascendant_house: HouseNumber::new(1).expect("house 1 must be valid"),
+            ascendant_house: renumber_house(ascendant_house, first_house),
             bodies: input
                 .bodies
                 .iter()
                 .map(|placement| {
+                    let absolute_house = derive_house_from_cusps(placement.longitude, &input.house_cusps)?;
                     Ok(HousedPlacement {
-                        house: derive_house_from_cusps(placement.longitude, &input.house_cusps)?,
+                        house: renumber_house(absolute_house, first_house),
                         placement: placement.clone(),
                     })
                 })
@@ -105,9 +109,10 @@ impl HouseTransformOp<SignContext> for CuspBasedHouseTransform {
                 .iter()
                 .enumerate()
                 .map(|(index, cusp)| {
+                    let absolute_house = HouseNumber::new((index + 1) as u8)
+                        .expect("cusp house index must stay within 1..=12");
                     Ok(HouseSeed {
-                        house: HouseNumber::new((index + 1) as u8)
-                            .expect("cusp house index must stay within 1..=12"),
+                        house: renumber_house(absolute_house, first_house),
                         cusp_longitude: normalize_longitude(*cusp)?,
                     })
                 })
@@ -131,6 +136,11 @@ fn whole_sign_house(reference_longitude: f64, target_longitude: f64) -> Result<H
 fn sign_index(longitude: f64) -> Result<usize, DeriveError> {
     let longitude = normalize_longitude(longitude)?;
     Ok((longitude / DEGREES_PER_SIGN).floor() as usize % NUM_HOUSES)
+}
+
+fn renumber_house(absolute_house: HouseNumber, first_house: HouseNumber) -> HouseNumber {
+    let renumbered = ((absolute_house.get() + NUM_HOUSES as u8 - first_house.get()) % NUM_HOUSES as u8) + 1;
+    HouseNumber::new(renumbered).expect("renumbered house must stay within 1..=12")
 }
 
 fn derive_house_from_cusps(planet_longitude: f64, house_cusps: &[f64]) -> Result<HouseNumber, DeriveError> {

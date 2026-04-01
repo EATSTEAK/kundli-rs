@@ -86,4 +86,42 @@ mod tests {
         assert!((chart.planets[0].longitude - 135.0).abs() < 1e-10);
         assert_eq!(chart.planets[0].sign, Sign::Leo);
     }
+
+    #[test]
+    fn moon_reference_reanchors_whole_sign_houses() {
+        let pipeline = Pipeline::new(
+            IdentityProjection,
+            reference::MoonReference,
+            IdentitySignTransform,
+            WholeSignHouseTransform,
+        );
+
+        let chart = pipeline.execute(sample_result()).unwrap();
+
+        assert_eq!(chart.planets[1].house.get(), 1);
+        assert_eq!(chart.planets[0].house.get(), 10);
+        assert_eq!(chart.houses[0].sign, Sign::Cancer);
+    }
+
+    #[test]
+    fn moon_reference_renumbers_cusp_based_houses() {
+        let pipeline = Pipeline::new(
+            IdentityProjection,
+            reference::MoonReference,
+            IdentitySignTransform,
+            CuspBasedHouseTransform {
+                house_system: crate::kundli::astro::HouseSystem::Placidus,
+            },
+        );
+
+        let mut result = sample_result();
+        result.house_cusps = [0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0];
+
+        let chart = pipeline.execute(result).unwrap();
+
+        assert_eq!(chart.planets[1].house.get(), 1);
+        assert_eq!(chart.planets[0].house.get(), 10);
+        assert_eq!(chart.houses[0].house.get(), 10);
+        assert_eq!(chart.houses[3].house.get(), 1);
+    }
 }
