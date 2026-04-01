@@ -21,7 +21,7 @@ pub enum Ayanamsha {
 }
 
 /// House system used for house derivation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum HouseSystem {
     /// Placidus house system.
     Placidus,
@@ -43,7 +43,7 @@ pub enum NodeType {
 }
 
 /// Astronomical bodies included in a derivation-ready [`AstroResult`](crate::kundli::astro::AstroResult).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum AstroBody {
     Sun,
     Moon,

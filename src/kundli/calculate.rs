@@ -5,26 +5,20 @@
 //! [`AstroEngine`] implementation.
 
 use crate::kundli::astro::{
-    AstroEngine, AstroRequest, AstroResult, SwissEphAstroEngine, SwissEphConfig,
+    AstroEngine, AstroRequest, AstroResult, HouseSystem, SwissEphAstroEngine, SwissEphConfig,
+    ZodiacType,
 };
-use crate::kundli::config::{KnownChart, KundliConfig};
-use crate::kundli::derive::d1::derive_d1_chart_result;
-use crate::kundli::derive::d9::derive_d9_chart_result;
+use crate::kundli::config::{ChartKind, ChartSpec, HouseMode, KundliConfig};
 use crate::kundli::derive::dasha::derive_vimshottari_dasha;
-use crate::kundli::error::{InputConfigMismatchField, KundliError};
+use crate::kundli::derive::pipeline::{
+    ChartPipeline, CuspBasedHouseTransform, DivisionalSignTransform, IdentityProjection,
+    IdentitySignTransform, ReferenceTransform, WholeSignHouseTransform,
+};
+use crate::kundli::error::{DeriveError, InputConfigMismatchField, KundliError};
 use std::collections::BTreeMap;
 
-use crate::kundli::model::{CalculationMeta, ChartLayer, KundliResult};
+use crate::kundli::model::{CalculationMeta, ChartLayer, ChartResult, KundliResult};
 
-/// Calculates a complete kundli using the default Swiss Ephemeris-backed
-/// engine.
-///
-/// This is the most convenient entrypoint for consumers who do not need to
-/// customize the astronomical backend. It validates the request, checks that
-/// request-level settings match the provided [`KundliConfig`], runs the default
-/// engine, and assembles the final [`KundliResult`].
-///
-/// Output sections are controlled by [`KundliConfig::charts`].
 pub fn calculate_kundli(
     request: AstroRequest,
     config: KundliConfig,
@@ -33,23 +27,6 @@ pub fn calculate_kundli(
     calculate_kundli_with_engine(&engine, &request, &config)
 }
 
-/// Calculates a complete kundli with an injected astronomical engine.
-///
-/// This advanced entrypoint is useful when you want to:
-///
-/// - reuse a custom [`AstroEngine`],
-/// - test the derive pipeline with stubbed astro data, or
-/// - source astronomical positions from a backend other than the default Swiss
-///   Ephemeris implementation.
-///
-/// The function performs three steps:
-///
-/// 1. validates the [`AstroRequest`],
-/// 2. verifies that request-level settings match the supplied [`KundliConfig`],
-/// 3. derives the requested kundli layers from the returned [`AstroResult`].
-///
-/// Returns [`KundliError::InputConfigMismatch`] when duplicated settings on the
-/// request and config disagree.
 pub fn calculate_kundli_with_engine<E: AstroEngine>(
     engine: &E,
     request: &AstroRequest,
@@ -64,14 +41,7 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
     let mut charts = BTreeMap::new();
 
     for chart in &config.charts {
-        let layer = match chart {
-            KnownChart::D1 => ChartLayer::D1(derive_d1_chart_result(&astro, &config)?.into()),
-            KnownChart::D9 => ChartLayer::D9(derive_d9_chart_result(&astro, &config)?.into()),
-            KnownChart::VimshottariDasha => {
-                ChartLayer::VimshottariDasha(derive_vimshottari_dasha(&astro)?)
-            }
-        };
-
+        let layer = derive_chart_layer(&astro, &config, *chart)?;
         charts.insert(*chart, layer);
     }
 
@@ -80,6 +50,118 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
         charts,
         warnings: vec![],
     })
+}
+
+fn derive_chart_layer(
+    astro: &AstroResult,
+    config: &KundliConfig,
+    chart: ChartSpec,
+) -> Result<ChartLayer, KundliError> {
+    match chart.kind {
+        ChartKind::VimshottariDasha => Ok(ChartLayer::VimshottariDasha(derive_vimshottari_dasha(
+            astro,
+        )?)),
+        _ => Ok(ChartLayer::Chart(derive_chart_result(astro, config, chart)?)),
+    }
+}
+
+fn derive_chart_result(
+    astro: &AstroResult,
+    config: &KundliConfig,
+    chart: ChartSpec,
+) -> Result<ChartResult, DeriveError> {
+    if matches!(chart.kind, ChartKind::Varga { .. } | ChartKind::DivisionalBhava { .. })
+        && astro.meta.zodiac != ZodiacType::Sidereal
+    {
+        return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
+    }
+
+    let reference = ReferenceTransform::new(chart.reference);
+
+    match chart.kind {
+        ChartKind::Rasi | ChartKind::Bhava | ChartKind::Chalit => match resolve_house_mode(chart, config)? {
+            ResolvedHouseMode::WholeSign => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                IdentitySignTransform,
+                WholeSignHouseTransform,
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::CuspBased(house_system) => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                IdentitySignTransform,
+                CuspBasedHouseTransform { house_system },
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::None => unreachable!("non-dasha charts must expose houses"),
+        },
+        ChartKind::Varga { division } => match resolve_house_mode(chart, config)? {
+            ResolvedHouseMode::WholeSign => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                DivisionalSignTransform::new(division)?,
+                WholeSignHouseTransform,
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::CuspBased(house_system) => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                DivisionalSignTransform::new(division)?,
+                CuspBasedHouseTransform { house_system },
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::None => unreachable!("varga charts must expose houses"),
+        },
+        ChartKind::DivisionalBhava { division } => match resolve_house_mode(chart, config)? {
+            ResolvedHouseMode::WholeSign => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                DivisionalSignTransform::new(division)?,
+                WholeSignHouseTransform,
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::CuspBased(house_system) => ChartPipeline::new(
+                IdentityProjection,
+                reference,
+                DivisionalSignTransform::new(division)?,
+                CuspBasedHouseTransform { house_system },
+            )
+            .execute(astro.clone()),
+            ResolvedHouseMode::None => unreachable!("divisional bhava charts must expose houses"),
+        },
+        ChartKind::VimshottariDasha => unreachable!("handled separately"),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResolvedHouseMode {
+    WholeSign,
+    CuspBased(HouseSystem),
+    None,
+}
+
+fn resolve_house_mode(chart: ChartSpec, config: &KundliConfig) -> Result<ResolvedHouseMode, DeriveError> {
+    let configured = match config.house_system {
+        HouseSystem::WholeSign => ResolvedHouseMode::WholeSign,
+        other => ResolvedHouseMode::CuspBased(other),
+    };
+
+    let resolved = match chart.house_mode {
+        HouseMode::Configured => configured,
+        HouseMode::WholeSign => ResolvedHouseMode::WholeSign,
+        HouseMode::CuspBased(system) => ResolvedHouseMode::CuspBased(system),
+        HouseMode::None => ResolvedHouseMode::None,
+    };
+
+    match chart.kind {
+        ChartKind::Bhava | ChartKind::Chalit | ChartKind::DivisionalBhava { .. }
+            if !matches!(resolved, ResolvedHouseMode::CuspBased(_)) =>
+        {
+            Err(DeriveError::UnsupportedHouseSystem(config.house_system))
+        }
+        _ => Ok(resolved),
+    }
 }
 
 fn validate_request_matches_config(
@@ -130,9 +212,9 @@ fn build_calculation_meta(astro: &AstroResult, config: &KundliConfig) -> Calcula
 mod tests {
     use super::*;
     use crate::kundli::astro::{
-        AstroBody, AstroBodyPosition, AstroError, AstroMeta, Ayanamsha, HouseSystem, NodeType,
-        ZodiacType,
+        AstroBody, AstroBodyPosition, AstroError, AstroMeta, Ayanamsha, NodeType,
     };
+    use crate::kundli::model::Nakshatra;
 
     #[derive(Debug, Clone)]
     struct StubEngine {
@@ -151,9 +233,9 @@ mod tests {
 
     fn sample_config(request: &AstroRequest) -> KundliConfig {
         KundliConfig::from_request(request).with_charts(&[
-            KnownChart::D1,
-            KnownChart::D9,
-            KnownChart::VimshottariDasha,
+            ChartSpec::d1(),
+            ChartSpec::d9(),
+            ChartSpec::vimshottari_dasha(),
         ])
     }
 
@@ -223,17 +305,11 @@ mod tests {
         assert_eq!(result.meta.house_system, HouseSystem::WholeSign);
         assert_eq!(result.meta.node_type, NodeType::True);
         assert_eq!(result.meta.body_count, AstroBody::ALL.len());
-        let d1 = result
-            .chart(KnownChart::D1)
-            .and_then(ChartLayer::as_d1)
-            .unwrap();
+        let d1 = result.chart(ChartSpec::d1()).and_then(ChartLayer::as_chart).unwrap();
         assert_eq!(d1.lagna.sign, crate::kundli::model::Sign::Taurus);
-        assert_eq!(
-            d1.planets[1].nakshatra.nakshatra,
-            crate::kundli::model::Nakshatra::Ashwini
-        );
-        assert!(result.chart(KnownChart::D9).is_some());
-        assert!(result.chart(KnownChart::VimshottariDasha).is_some());
+        assert_eq!(d1.planets[1].nakshatra.nakshatra, Nakshatra::Ashwini);
+        assert!(result.chart(ChartSpec::d9()).is_some());
+        assert!(result.chart(ChartSpec::vimshottari_dasha()).is_some());
         assert!(result.warnings.is_empty());
     }
 
@@ -257,9 +333,9 @@ mod tests {
     fn calculate_with_engine_deduplicates_duplicate_chart_requests_via_config_validation() {
         let request = sample_request();
         let config = KundliConfig::from_request(&request).with_charts(&[
-            KnownChart::D1,
-            KnownChart::D1,
-            KnownChart::VimshottariDasha,
+            ChartSpec::d1(),
+            ChartSpec::d1(),
+            ChartSpec::vimshottari_dasha(),
         ]);
         let engine = StubEngine {
             result: Ok(sample_astro()),
@@ -268,8 +344,8 @@ mod tests {
         let result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
         assert_eq!(result.charts.len(), 2);
-        assert!(result.chart(KnownChart::D1).is_some());
-        assert!(result.chart(KnownChart::VimshottariDasha).is_some());
+        assert!(result.chart(ChartSpec::d1()).is_some());
+        assert!(result.chart(ChartSpec::vimshottari_dasha()).is_some());
     }
 
     #[test]

@@ -5,7 +5,7 @@ use kundli_rs::kundli::astro::{
     SwissEphConfig, ZodiacType,
 };
 use kundli_rs::kundli::calculate::calculate_kundli_with_engine;
-use kundli_rs::kundli::config::{KnownChart, KundliConfig};
+use kundli_rs::kundli::config::{ChartSpec, KundliConfig};
 use kundli_rs::kundli::derive::d1::derive_d1_chart;
 use kundli_rs::kundli::derive::d9::derive_d9_chart;
 use kundli_rs::kundli::derive::dasha::derive_vimshottari_dasha;
@@ -83,9 +83,9 @@ fn build_request(fixture: &SmokeFixture) -> AstroRequest {
 
 fn build_config(request: &AstroRequest) -> KundliConfig {
     KundliConfig::from_request(request).with_charts(&[
-        KnownChart::D1,
-        KnownChart::D9,
-        KnownChart::VimshottariDasha,
+        ChartSpec::d1(),
+        ChartSpec::d9(),
+        ChartSpec::vimshottari_dasha(),
     ])
 }
 
@@ -143,17 +143,11 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
     assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
     assert_eq!(
-        d1.planets
-            .iter()
-            .map(|planet| planet.body)
-            .collect::<Vec<_>>(),
+        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert_eq!(
-        d9.planets
-            .iter()
-            .map(|planet| planet.body)
-            .collect::<Vec<_>>(),
+        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert!(d1.lagna.longitude.is_finite());
@@ -183,21 +177,17 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
     let manual_dasha = derive_vimshottari_dasha(&astro).unwrap();
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
+    let final_d1 = final_result.chart(ChartSpec::d1()).and_then(ChartLayer::as_chart).unwrap();
+    let final_d9 = final_result.chart(ChartSpec::d9()).and_then(ChartLayer::as_chart).unwrap();
+
+    assert_eq!(final_d1.lagna, manual_d1.lagna);
+    assert_eq!(final_d1.planets, manual_d1.planets);
+    assert_eq!(final_d1.houses, manual_d1.houses);
+    assert_eq!(final_d9.lagna, manual_d9.lagna);
+    assert_eq!(final_d9.planets, manual_d9.planets);
     assert_eq!(
         final_result
-            .chart(KnownChart::D1)
-            .and_then(ChartLayer::as_d1),
-        Some(&manual_d1)
-    );
-    assert_eq!(
-        final_result
-            .chart(KnownChart::D9)
-            .and_then(ChartLayer::as_d9),
-        Some(&manual_d9)
-    );
-    assert_eq!(
-        final_result
-            .chart(KnownChart::VimshottariDasha)
+            .chart(ChartSpec::vimshottari_dasha())
             .and_then(ChartLayer::as_vimshottari_dasha),
         Some(&manual_dasha)
     );
@@ -214,18 +204,18 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
 fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
     let fixture = load_fixture();
     let request = build_request(&fixture);
-    let config = KundliConfig::from_request(&request).with_charts(&[KnownChart::D1]);
+    let config = KundliConfig::from_request(&request).with_charts(&[ChartSpec::d1()]);
     let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
 
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
     let d1 = final_result
-        .chart(KnownChart::D1)
-        .and_then(ChartLayer::as_d1)
+        .chart(ChartSpec::d1())
+        .and_then(ChartLayer::as_chart)
         .unwrap();
 
-    assert!(final_result.chart(KnownChart::D1).is_some());
-    assert!(final_result.chart(KnownChart::D9).is_none());
-    assert!(final_result.chart(KnownChart::VimshottariDasha).is_none());
+    assert!(final_result.chart(ChartSpec::d1()).is_some());
+    assert!(final_result.chart(ChartSpec::d9()).is_none());
+    assert!(final_result.chart(ChartSpec::vimshottari_dasha()).is_none());
     assert_eq!(d1.planets.len(), fixture.expected_body_count);
     assert_eq!(d1.houses.len(), fixture.expected_house_cusp_count);
 }

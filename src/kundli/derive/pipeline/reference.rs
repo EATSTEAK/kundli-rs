@@ -1,14 +1,12 @@
-use crate::kundli::astro::AstroBody;
+use crate::kundli::config::ReferenceKey;
 use crate::kundli::error::DeriveError;
 
 use super::ProjectedBase;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum ReferencePoint {
     Lagna,
-    Planet(AstroBody),
-    CustomLongitude(f64),
+    Planet(crate::kundli::astro::AstroBody),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,19 +28,75 @@ pub(crate) trait ReferenceOp<Input> {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(crate) struct ReferenceTransform {
+    reference: ReferenceKey,
+}
+
+impl ReferenceTransform {
+    pub(crate) const fn new(reference: ReferenceKey) -> Self {
+        Self { reference }
+    }
+}
+
+impl ReferenceOp<ProjectedBase> for ReferenceTransform {
+    type Output = ReferenceContext;
+
+    fn apply(&self, input: &ProjectedBase) -> Result<Self::Output, DeriveError> {
+        let resolved = match self.reference {
+            ReferenceKey::Lagna => ResolvedReference {
+                point: ReferencePoint::Lagna,
+                longitude: input.ascendant_longitude,
+            },
+            ReferenceKey::Moon => {
+                let moon = input
+                    .bodies
+                    .iter()
+                    .find(|body| body.body == crate::kundli::astro::AstroBody::Moon)
+                    .ok_or(DeriveError::MissingMoon)?;
+                ResolvedReference {
+                    point: ReferencePoint::Planet(crate::kundli::astro::AstroBody::Moon),
+                    longitude: moon.longitude,
+                }
+            }
+            ReferenceKey::Sun => {
+                let sun = input
+                    .bodies
+                    .iter()
+                    .find(|body| body.body == crate::kundli::astro::AstroBody::Sun)
+                    .ok_or(DeriveError::MissingPlacementBody)?;
+                ResolvedReference {
+                    point: ReferencePoint::Planet(crate::kundli::astro::AstroBody::Sun),
+                    longitude: sun.longitude,
+                }
+            }
+            ReferenceKey::Planet(body) => {
+                let placement = input
+                    .bodies
+                    .iter()
+                    .find(|candidate| candidate.body == body)
+                    .ok_or(DeriveError::MissingPlacementBody)?;
+                ResolvedReference {
+                    point: ReferencePoint::Planet(body),
+                    longitude: placement.longitude,
+                }
+            }
+        };
+
+        Ok(ReferenceContext {
+            projected: input.clone(),
+            reference: resolved,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct LagnaReference;
 
 impl ReferenceOp<ProjectedBase> for LagnaReference {
     type Output = ReferenceContext;
 
     fn apply(&self, input: &ProjectedBase) -> Result<Self::Output, DeriveError> {
-        Ok(ReferenceContext {
-            projected: input.clone(),
-            reference: ResolvedReference {
-                point: ReferencePoint::Lagna,
-                longitude: input.ascendant_longitude,
-            },
-        })
+        ReferenceTransform::new(ReferenceKey::Lagna).apply(input)
     }
 }
 
@@ -54,14 +108,6 @@ impl ReferenceOp<ProjectedBase> for MoonReference {
     type Output = ReferenceContext;
 
     fn apply(&self, input: &ProjectedBase) -> Result<Self::Output, DeriveError> {
-        let moon = &input.bodies[AstroBody::Moon.index()];
-
-        Ok(ReferenceContext {
-            projected: input.clone(),
-            reference: ResolvedReference {
-                point: ReferencePoint::Planet(AstroBody::Moon),
-                longitude: moon.longitude,
-            },
-        })
+        ReferenceTransform::new(ReferenceKey::Moon).apply(input)
     }
 }

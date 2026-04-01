@@ -11,9 +11,12 @@ pub(crate) use house::{
 };
 pub(crate) use materialize::Materialize;
 pub(crate) use projection::{IdentityProjection, ProjectedBase, ProjectionOp};
-pub(crate) use reference::{LagnaReference, ReferenceContext, ReferenceOp, ResolvedReference};
+pub(crate) use reference::{
+    LagnaReference, ReferenceContext, ReferenceOp, ReferenceTransform, ResolvedReference,
+};
 pub(crate) use sign::{
-    D9Rule, IdentitySignTransform, SignContext, SignPlacement, SignTransformOp, VargaTransform,
+    D9Rule, DivisionalSignTransform, IdentitySignTransform, SignContext, SignPlacement,
+    SignTransformOp, VargaTransform,
 };
 
 #[cfg(test)]
@@ -22,6 +25,8 @@ mod tests {
     use crate::kundli::astro::{
         AstroBody, AstroBodyPosition, AstroMeta, AstroResult, Ayanamsha, ZodiacType,
     };
+    use crate::kundli::config::ReferenceKey;
+    use crate::kundli::derive::pipeline::reference::MoonReference;
     use crate::kundli::model::Sign;
 
     fn sample_result() -> AstroResult {
@@ -94,10 +99,25 @@ mod tests {
     }
 
     #[test]
+    fn generic_divisional_transform_maps_d10() {
+        let pipeline = ChartPipeline::new(
+            IdentityProjection,
+            LagnaReference,
+            DivisionalSignTransform::new(10).unwrap(),
+            WholeSignHouseTransform,
+        );
+
+        let chart = pipeline.execute(sample_result()).unwrap();
+
+        assert!((chart.planets[0].longitude - 150.0).abs() < 1e-10);
+        assert_eq!(chart.planets[0].sign, Sign::Virgo);
+    }
+
+    #[test]
     fn moon_reference_reanchors_whole_sign_houses() {
         let pipeline = ChartPipeline::new(
             IdentityProjection,
-            reference::MoonReference,
+            MoonReference,
             IdentitySignTransform,
             WholeSignHouseTransform,
         );
@@ -110,10 +130,26 @@ mod tests {
     }
 
     #[test]
+    fn generic_reference_transform_supports_sun_reference() {
+        let pipeline = ChartPipeline::new(
+            IdentityProjection,
+            ReferenceTransform::new(ReferenceKey::Sun),
+            IdentitySignTransform,
+            WholeSignHouseTransform,
+        );
+
+        let chart = pipeline.execute(sample_result()).unwrap();
+
+        assert_eq!(chart.planets[0].house.get(), 1);
+        assert_eq!(chart.planets[1].house.get(), 4);
+        assert_eq!(chart.houses[0].sign, Sign::Aries);
+    }
+
+    #[test]
     fn moon_reference_renumbers_cusp_based_houses() {
         let pipeline = ChartPipeline::new(
             IdentityProjection,
-            reference::MoonReference,
+            MoonReference,
             IdentitySignTransform,
             CuspBasedHouseTransform {
                 house_system: crate::kundli::astro::HouseSystem::Placidus,

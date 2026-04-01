@@ -8,8 +8,6 @@ use crate::kundli::model::{NakshatraPlacement, Sign};
 
 use super::{ReferenceContext, ResolvedReference};
 
-const NAVAMSAS_PER_SIGN: f64 = 9.0;
-
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct SignPlacement {
     pub body: Option<AstroBody>,
@@ -53,7 +51,7 @@ impl SignTransformOp<ReferenceContext> for IdentitySignTransform {
                     build_sign_placement(Some(body.body), body.longitude, body.is_retrograde)
                 })
                 .collect::<Result<Vec<_>, _>>()?,
-            house_cusps: input.projected.house_cusps.clone(),
+            house_cusps: input.projected.house_cusps.to_vec(),
         })
     }
 }
@@ -67,8 +65,7 @@ pub(crate) struct D9Rule;
 
 impl VargaRule for D9Rule {
     fn map(longitude: f64) -> Result<f64, DeriveError> {
-        let longitude = normalize_longitude(longitude)?;
-        normalize_longitude(longitude * NAVAMSAS_PER_SIGN)
+        map_divisional_longitude(longitude, 9)
     }
 }
 
@@ -114,9 +111,66 @@ where
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?,
-            house_cusps: input.projected.house_cusps.clone(),
+            house_cusps: input.projected.house_cusps.to_vec(),
         })
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct DivisionalSignTransform {
+    division: u8,
+}
+
+impl DivisionalSignTransform {
+    pub(crate) fn new(division: u8) -> Result<Self, DeriveError> {
+        if division == 0 {
+            return Err(DeriveError::InvalidDivision(division));
+        }
+
+        Ok(Self { division })
+    }
+}
+
+impl SignTransformOp<ReferenceContext> for DivisionalSignTransform {
+    type Output = SignContext;
+
+    fn apply(&self, input: &ReferenceContext) -> Result<Self::Output, DeriveError> {
+        let division = self.division;
+
+        Ok(SignContext {
+            reference: ResolvedReference {
+                point: input.reference.point,
+                longitude: map_divisional_longitude(input.reference.longitude, division)?,
+            },
+            ascendant: build_sign_placement(
+                None,
+                map_divisional_longitude(input.projected.ascendant_longitude, division)?,
+                false,
+            )?,
+            bodies: input
+                .projected
+                .bodies
+                .iter()
+                .map(|body| {
+                    build_sign_placement(
+                        Some(body.body),
+                        map_divisional_longitude(body.longitude, division)?,
+                        body.is_retrograde,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+            house_cusps: input.projected.house_cusps.to_vec(),
+        })
+    }
+}
+
+fn map_divisional_longitude(longitude: f64, division: u8) -> Result<f64, DeriveError> {
+    if division == 0 {
+        return Err(DeriveError::InvalidDivision(division));
+    }
+
+    let longitude = normalize_longitude(longitude)?;
+    normalize_longitude(longitude * f64::from(division))
 }
 
 fn build_sign_placement(

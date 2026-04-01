@@ -8,10 +8,6 @@ use crate::kundli::error::DeriveError;
 use crate::kundli::model::{ChartResult, D1Chart};
 
 /// Derives a complete D1 chart from a raw astronomical result.
-///
-/// This is a lower-level helper than [`crate::calculate_kundli`]. Prefer the
-/// high-level API unless you already have an [`AstroResult`] and only need the
-/// D1 layer.
 pub fn derive_d1_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D1Chart, DeriveError> {
     derive_d1_chart_result(astro, config).map(Into::into)
 }

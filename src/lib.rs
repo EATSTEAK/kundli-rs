@@ -10,20 +10,20 @@
 //! ```no_run
 //! use kundli_rs::calculate_kundli;
 //! use kundli_rs::kundli::astro::AstroRequest;
-//! use kundli_rs::kundli::config::{KnownChart, KundliConfig};
+//! use kundli_rs::kundli::config::{ChartSpec, KundliConfig};
 //!
 //! let request = AstroRequest::new(2451545.0, 37.5665, 126.9780);
 //!
 //! let config = KundliConfig::from_request(&request).with_charts(&[
-//!     KnownChart::D1,
-//!     KnownChart::D9,
-//!     KnownChart::VimshottariDasha,
+//!     ChartSpec::d1(),
+//!     ChartSpec::d9(),
+//!     ChartSpec::vimshottari_dasha(),
 //! ]);
 //!
 //! let result = calculate_kundli(request, config)?;
 //! let d1 = result
-//!     .chart(KnownChart::D1)
-//!     .and_then(kundli_rs::kundli::model::ChartLayer::as_d1)
+//!     .chart(ChartSpec::d1())
+//!     .and_then(kundli_rs::kundli::model::ChartLayer::as_chart)
 //!     .unwrap();
 //!
 //! println!("Lagna sign: {:?}", d1.lagna.sign);

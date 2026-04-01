@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::kundli::astro::{AstroError, HouseSystem, ZodiacType};
+use crate::kundli::config::ChartKind;
 use crate::kundli::model::DashaLord;
 
 /// Invalid high-level chart selection declared in [`crate::kundli::config::KundliConfig`].
@@ -8,40 +9,40 @@ use crate::kundli::model::DashaLord;
 pub enum ChartSelectionError {
     /// At least one chart layer must be requested.
     Empty,
+    /// A divisional chart requested division 0.
+    InvalidDivision(u8),
+    /// The selected chart kind does not support the given house mode.
+    UnexpectedHouseMode(ChartKind),
 }
 
 impl fmt::Display for ChartSelectionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Empty => write!(f, "at least one chart must be requested"),
+            Self::InvalidDivision(division) => {
+                write!(f, "invalid divisional chart: D{division}; expected division >= 1")
+            }
+            Self::UnexpectedHouseMode(kind) => {
+                write!(f, "chart kind {kind:?} does not support the selected house mode")
+            }
         }
     }
 }
 
 impl std::error::Error for ChartSelectionError {}
 
-/// Errors returned while deriving kundli-specific structures from astronomical
-/// output.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeriveError {
-    /// Vimshottari dasha derivation requires a Moon position.
     MissingMoon,
-    /// A pipeline placement unexpectedly did not contain a body.
     MissingPlacementBody,
-    /// A cusp-based house derivation expected exactly 12 cusps.
     InvalidHouseCusps(usize),
-    /// A derived house number fell outside the supported `1..=12` range.
     InvalidHouseNumber(u8),
-    /// A longitude could not be interpreted as a finite degree value.
     InvalidLongitude(f64),
-    /// A pada value fell outside the supported `1..=4` range.
     InvalidPada(u8),
-    /// A dasha lord could not be found in the Vimshottari sequence.
     InvalidDashaSequenceLord(DashaLord),
-    /// The derive operation requires sidereal input but received a different zodiac mode.
+    InvalidDivision(u8),
     UnsupportedZodiac(ZodiacType),
-    /// D9 derivation currently supports only the whole-sign house system.
-    UnsupportedD9HouseSystem(HouseSystem),
+    UnsupportedHouseSystem(HouseSystem),
 }
 
 impl fmt::Display for DeriveError {
@@ -58,10 +59,7 @@ impl fmt::Display for DeriveError {
                 write!(f, "invalid house number: {value}; expected a value in 1..=12")
             }
             Self::InvalidLongitude(longitude) => {
-                write!(
-                    f,
-                    "invalid longitude: {longitude}; expected a finite degree value"
-                )
+                write!(f, "invalid longitude: {longitude}; expected a finite degree value")
             }
             Self::InvalidPada(value) => {
                 write!(f, "invalid pada value: {value}; expected a value in 1..=4")
@@ -69,17 +67,17 @@ impl fmt::Display for DeriveError {
             Self::InvalidDashaSequenceLord(lord) => {
                 write!(f, "invalid Vimshottari sequence lord: {lord:?}")
             }
+            Self::InvalidDivision(division) => {
+                write!(f, "invalid divisional chart: D{division}; expected division >= 1")
+            }
             Self::UnsupportedZodiac(zodiac) => {
                 write!(
                     f,
                     "unsupported zodiac for derive operation: {zodiac:?}; expected sidereal data"
                 )
             }
-            Self::UnsupportedD9HouseSystem(house_system) => {
-                write!(
-                    f,
-                    "unsupported D9 house system: {house_system:?}; expected WholeSign"
-                )
+            Self::UnsupportedHouseSystem(house_system) => {
+                write!(f, "unsupported house system for derive operation: {house_system:?}")
             }
         }
     }
@@ -87,19 +85,11 @@ impl fmt::Display for DeriveError {
 
 impl std::error::Error for DeriveError {}
 
-/// Duplicated settings that must match between the request and config.
-///
-/// Consumers can pattern match this enum to identify which public input field
-/// needs to be aligned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputConfigMismatchField {
-    /// `request.zodiac` and `config.zodiac` disagreed.
     Zodiac,
-    /// `request.ayanamsha` and `config.ayanamsha` disagreed.
     Ayanamsha,
-    /// `request.house_system` and `config.house_system` disagreed.
     HouseSystem,
-    /// `request.node_type` and `config.node_type` disagreed.
     NodeType,
 }
 
@@ -121,16 +111,11 @@ impl fmt::Display for InputConfigMismatchField {
     }
 }
 
-/// Top-level error returned by high-level kundli calculation entrypoints.
 #[derive(Debug, Clone, PartialEq)]
 pub enum KundliError {
-    /// The astronomical layer failed or rejected the request.
     Astro(AstroError),
-    /// A kundli-specific derive step failed.
     Derive(DeriveError),
-    /// The requested chart selection is invalid.
     ChartSelection(ChartSelectionError),
-    /// Settings duplicated between request and config did not match.
     InputConfigMismatch(InputConfigMismatchField),
 }
 

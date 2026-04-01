@@ -188,7 +188,7 @@ fn derive_d9_chart_rejects_non_whole_sign_house_systems() {
 
     assert_eq!(
         error,
-        DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal)
+        DeriveError::UnsupportedHouseSystem(HouseSystem::Equal)
     );
 }
 
