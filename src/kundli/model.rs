@@ -1,4 +1,7 @@
+use std::collections::BTreeMap;
+
 use crate::kundli::astro::{AstroBody, Ayanamsha, HouseSystem, NodeType, ZodiacType};
+use crate::kundli::config::KnownChart;
 
 /// The twelve zodiac signs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -288,26 +291,50 @@ pub struct CalculationWarning {
     pub message: &'static str,
 }
 
+/// A chart-layer payload stored in the high-level multi-chart response.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ChartLayer {
+    D1(D1Chart),
+    D9(D9Chart),
+    VimshottariDasha(VimshottariDasha),
+}
+
+impl ChartLayer {
+    pub fn as_d1(&self) -> Option<&D1Chart> {
+        match self {
+            Self::D1(chart) => Some(chart),
+            _ => None,
+        }
+    }
+
+    pub fn as_d9(&self) -> Option<&D9Chart> {
+        match self {
+            Self::D9(chart) => Some(chart),
+            _ => None,
+        }
+    }
+
+    pub fn as_vimshottari_dasha(&self) -> Option<&VimshottariDasha> {
+        match self {
+            Self::VimshottariDasha(dasha) => Some(dasha),
+            _ => None,
+        }
+    }
+}
+
 /// Fully assembled result returned by the high-level kundli API.
-///
-/// The top-level `lagna`, `planets`, and `houses` fields mirror the contents of
-/// [`KundliResult::d1`] for ergonomic access to the primary chart layer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KundliResult {
     /// Calculation metadata.
     pub meta: CalculationMeta,
-    /// Convenience mirror of `d1.lagna`.
-    pub lagna: LagnaResult,
-    /// Convenience mirror of `d1.planets`.
-    pub planets: Vec<PlanetPlacement>,
-    /// Convenience mirror of `d1.houses`.
-    pub houses: Vec<HouseResult>,
-    /// Primary natal chart layer.
-    pub d1: D1Chart,
-    /// Optional Navamsa chart.
-    pub d9: Option<D9Chart>,
-    /// Optional Vimshottari dasha summary.
-    pub dasha: Option<VimshottariDasha>,
+    /// Requested chart layers keyed by chart kind.
+    pub charts: BTreeMap<KnownChart, ChartLayer>,
     /// Non-fatal warnings collected during assembly.
     pub warnings: Vec<CalculationWarning>,
+}
+
+impl KundliResult {
+    pub fn chart(&self, kind: KnownChart) -> Option<&ChartLayer> {
+        self.charts.get(&kind)
+    }
 }

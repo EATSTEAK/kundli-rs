@@ -157,8 +157,11 @@ let request = AstroRequest::new(jd_ut, latitude, longitude)
     .with_node_type(node_type);
 
 let config = KundliConfig::from_request(&request)
-    .with_include_d9(true)
-    .with_include_dasha(true);
+    .with_charts(&[
+    KnownChart::D1,
+    KnownChart::D9,
+    KnownChart::VimshottariDasha,
+]);
 ```
 
 이 패턴의 핵심 의도는 request/config에 중복된 zodiac-related 설정이 처음부터 일치하도록 만드는 것이다.
@@ -168,7 +171,7 @@ let config = KundliConfig::from_request(&request)
 - D1: `house_system`에 따라 WholeSign / cusp 기반 분기
 - D9: `house_system == WholeSign`인지 검증
 
-`include_d9`, `include_dasha`는 현재 derive 함수 내부에서는 소비되지 않는다. 이 값들은 상위 orchestration에서 의미를 가진다.
+`charts` selection은 현재 derive 함수 내부에서는 소비되지 않는다. 이 값은 상위 orchestration에서 어떤 chart layer를 `KundliResult.charts` 컬렉션에 조립할지 결정할 때 의미를 가진다.
 
 ### 4.3 결과 모델
 

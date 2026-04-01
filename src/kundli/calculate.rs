@@ -7,12 +7,14 @@
 use crate::kundli::astro::{
     AstroEngine, AstroRequest, AstroResult, SwissEphAstroEngine, SwissEphConfig,
 };
-use crate::kundli::config::KundliConfig;
+use crate::kundli::config::{KnownChart, KundliConfig};
 use crate::kundli::derive::d1::derive_d1_chart_result;
 use crate::kundli::derive::d9::derive_d9_chart_result;
 use crate::kundli::derive::dasha::derive_vimshottari_dasha;
 use crate::kundli::error::{InputConfigMismatchField, KundliError};
-use crate::kundli::model::{CalculationMeta, D1Chart, D9Chart, KundliResult};
+use std::collections::BTreeMap;
+
+use crate::kundli::model::{CalculationMeta, ChartLayer, KundliResult};
 
 /// Calculates a complete kundli using the default Swiss Ephemeris-backed
 /// engine.
@@ -22,8 +24,7 @@ use crate::kundli::model::{CalculationMeta, D1Chart, D9Chart, KundliResult};
 /// request-level settings match the provided [`KundliConfig`], runs the default
 /// engine, and assembles the final [`KundliResult`].
 ///
-/// Optional output sections are controlled by [`KundliConfig::include_d9`] and
-/// [`KundliConfig::include_dasha`].
+/// Output sections are controlled by [`KundliConfig::charts`].
 pub fn calculate_kundli(
     request: AstroRequest,
     config: KundliConfig,
@@ -58,27 +59,23 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
     validate_request_matches_config(request, config)?;
 
     let astro = engine.calculate(request)?;
-    let d1: D1Chart = derive_d1_chart_result(&astro, config)?.into();
-    let d9: Option<D9Chart> = config
-        .include_d9
-        .then(|| derive_d9_chart_result(&astro, config).map(Into::into))
-        .transpose()?;
-    let dasha = config
-        .include_dasha
-        .then(|| derive_vimshottari_dasha(&astro))
-        .transpose()?;
-    let lagna = d1.lagna.clone();
-    let planets = d1.planets.clone();
-    let houses = d1.houses.clone();
+    let mut charts = BTreeMap::new();
+
+    for chart in &config.charts {
+        let layer = match chart {
+            KnownChart::D1 => ChartLayer::D1(derive_d1_chart_result(&astro, config)?.into()),
+            KnownChart::D9 => ChartLayer::D9(derive_d9_chart_result(&astro, config)?.into()),
+            KnownChart::VimshottariDasha => {
+                ChartLayer::VimshottariDasha(derive_vimshottari_dasha(&astro)?)
+            }
+        };
+
+        charts.insert(*chart, layer);
+    }
 
     Ok(KundliResult {
         meta: build_calculation_meta(&astro, config),
-        lagna,
-        planets,
-        houses,
-        d1,
-        d9,
-        dasha,
+        charts,
         warnings: vec![],
     })
 }
@@ -134,7 +131,6 @@ mod tests {
         AstroBody, AstroBodyPosition, AstroError, AstroMeta, Ayanamsha, HouseSystem, NodeType,
         ZodiacType,
     };
-    use crate::kundli::model::{Nakshatra, Sign};
 
     #[derive(Debug, Clone)]
     struct StubEngine {
@@ -152,9 +148,11 @@ mod tests {
     }
 
     fn sample_config(request: &AstroRequest) -> KundliConfig {
-        KundliConfig::from_request(request)
-            .with_include_d9(true)
-            .with_include_dasha(true)
+        KundliConfig::from_request(request).with_charts(&[
+            KnownChart::D1,
+            KnownChart::D9,
+            KnownChart::VimshottariDasha,
+        ])
     }
 
     fn sample_astro() -> AstroResult {
@@ -223,13 +221,14 @@ mod tests {
         assert_eq!(result.meta.house_system, HouseSystem::WholeSign);
         assert_eq!(result.meta.node_type, NodeType::True);
         assert_eq!(result.meta.body_count, AstroBody::ALL.len());
-        assert_eq!(result.lagna, result.d1.lagna);
-        assert_eq!(result.planets, result.d1.planets);
-        assert_eq!(result.houses, result.d1.houses);
-        assert_eq!(result.d1.lagna.sign, Sign::Taurus);
-        assert_eq!(result.d1.planets[1].nakshatra.nakshatra, Nakshatra::Ashwini);
-        assert!(result.d9.is_some());
-        assert!(result.dasha.is_some());
+        let d1 = result.chart(KnownChart::D1).and_then(ChartLayer::as_d1).unwrap();
+        assert_eq!(d1.lagna.sign, crate::kundli::model::Sign::Taurus);
+        assert_eq!(
+            d1.planets[1].nakshatra.nakshatra,
+            crate::kundli::model::Nakshatra::Ashwini
+        );
+        assert!(result.chart(KnownChart::D9).is_some());
+        assert!(result.chart(KnownChart::VimshottariDasha).is_some());
         assert!(result.warnings.is_empty());
     }
 
@@ -243,8 +242,28 @@ mod tests {
 
         let result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
-        assert!(result.d9.is_none());
-        assert!(result.dasha.is_none());
+        assert!(result.chart(KnownChart::D1).is_none());
+        assert!(result.chart(KnownChart::D9).is_none());
+        assert!(result.chart(KnownChart::VimshottariDasha).is_none());
+    }
+
+    #[test]
+    fn calculate_with_engine_deduplicates_duplicate_chart_requests() {
+        let request = sample_request();
+        let config = KundliConfig::from_request(&request).with_charts(&[
+            KnownChart::D1,
+            KnownChart::D1,
+            KnownChart::VimshottariDasha,
+        ]);
+        let engine = StubEngine {
+            result: Ok(sample_astro()),
+        };
+
+        let result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+
+        assert_eq!(result.charts.len(), 2);
+        assert!(result.chart(KnownChart::D1).is_some());
+        assert!(result.chart(KnownChart::VimshottariDasha).is_some());
     }
 
     #[test]

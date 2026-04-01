@@ -2,13 +2,21 @@ use crate::kundli::astro::{
     AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType,
 };
 
+/// Known high-level chart layers that can be requested from the public API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum KnownChart {
+    D1,
+    D9,
+    VimshottariDasha,
+}
+
 /// Declarative options that control how a kundli is derived.
 ///
 /// Several fields duplicate settings present on
 /// [`AstroRequest`]. Use
 /// [`KundliConfig::from_request`] when you want those settings to match by
 /// construction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KundliConfig {
     /// Zodiac mode used throughout the calculation.
     pub zodiac: ZodiacType,
@@ -18,10 +26,8 @@ pub struct KundliConfig {
     pub house_system: HouseSystem,
     /// Lunar node mode used for Rahu and Ketu positions.
     pub node_type: NodeType,
-    /// Whether to include a derived Navamsa (D9) chart.
-    pub include_d9: bool,
-    /// Whether to include derived Vimshottari dasha periods.
-    pub include_dasha: bool,
+    /// Requested chart layers to derive from the astronomical result.
+    pub charts: Vec<KnownChart>,
 }
 
 impl KundliConfig {
@@ -37,8 +43,7 @@ impl KundliConfig {
             ayanamsha,
             house_system,
             node_type,
-            include_d9: false,
-            include_dasha: false,
+            charts: vec![],
         }
     }
 
@@ -76,15 +81,9 @@ impl KundliConfig {
         self
     }
 
-    /// Returns a copy with D9 inclusion enabled or disabled.
-    pub fn with_include_d9(mut self, include_d9: bool) -> Self {
-        self.include_d9 = include_d9;
-        self
-    }
-
-    /// Returns a copy with dasha inclusion enabled or disabled.
-    pub fn with_include_dasha(mut self, include_dasha: bool) -> Self {
-        self.include_dasha = include_dasha;
+    /// Returns a copy with an explicit set of requested chart layers.
+    pub fn with_charts(mut self, charts: &[KnownChart]) -> Self {
+        self.charts = charts.to_vec();
         self
     }
 }

@@ -5,8 +5,9 @@ use kundli_rs::kundli::astro::{
     SwissEphConfig, ZodiacType,
 };
 use kundli_rs::kundli::calculate::calculate_kundli_with_engine;
-use kundli_rs::kundli::config::KundliConfig;
+use kundli_rs::kundli::config::{KnownChart, KundliConfig};
 use kundli_rs::kundli::derive::d1::derive_d1_chart;
+use kundli_rs::kundli::model::ChartLayer;
 use kundli_rs::kundli::derive::d9::derive_d9_chart;
 use kundli_rs::kundli::derive::dasha::derive_vimshottari_dasha;
 use serde::Deserialize;
@@ -81,9 +82,11 @@ fn build_request(fixture: &SmokeFixture) -> AstroRequest {
 }
 
 fn build_config(request: &AstroRequest) -> KundliConfig {
-    KundliConfig::from_request(request)
-        .with_include_d9(true)
-        .with_include_dasha(true)
+    KundliConfig::from_request(request).with_charts(&[
+        KnownChart::D1,
+        KnownChart::D9,
+        KnownChart::VimshottariDasha,
+    ])
 }
 
 #[test]
@@ -170,12 +173,20 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
     let manual_dasha = derive_vimshottari_dasha(&astro).unwrap();
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
-    assert_eq!(final_result.d1, manual_d1);
-    assert_eq!(final_result.d9, Some(manual_d9));
-    assert_eq!(final_result.dasha, Some(manual_dasha));
-    assert_eq!(final_result.lagna, final_result.d1.lagna);
-    assert_eq!(final_result.planets, final_result.d1.planets);
-    assert_eq!(final_result.houses, final_result.d1.houses);
+    assert_eq!(
+        final_result.chart(KnownChart::D1).and_then(ChartLayer::as_d1),
+        Some(&manual_d1)
+    );
+    assert_eq!(
+        final_result.chart(KnownChart::D9).and_then(ChartLayer::as_d9),
+        Some(&manual_d9)
+    );
+    assert_eq!(
+        final_result
+            .chart(KnownChart::VimshottariDasha)
+            .and_then(ChartLayer::as_vimshottari_dasha),
+        Some(&manual_dasha)
+    );
     assert_eq!(final_result.meta.jd_ut, request.jd_ut);
     assert_eq!(final_result.meta.zodiac, request.zodiac);
     assert_eq!(final_result.meta.ayanamsha, request.ayanamsha);
@@ -189,15 +200,18 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
 fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
     let fixture = load_fixture();
     let request = build_request(&fixture);
-    let config = build_config(&request)
-        .with_include_d9(false)
-        .with_include_dasha(false);
+    let config = KundliConfig::from_request(&request).with_charts(&[KnownChart::D1]);
     let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
 
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+    let d1 = final_result
+        .chart(KnownChart::D1)
+        .and_then(ChartLayer::as_d1)
+        .unwrap();
 
-    assert!(final_result.d9.is_none());
-    assert!(final_result.dasha.is_none());
-    assert_eq!(final_result.d1.planets.len(), fixture.expected_body_count);
-    assert_eq!(final_result.d1.houses.len(), fixture.expected_house_cusp_count);
+    assert!(final_result.chart(KnownChart::D1).is_some());
+    assert!(final_result.chart(KnownChart::D9).is_none());
+    assert!(final_result.chart(KnownChart::VimshottariDasha).is_none());
+    assert_eq!(d1.planets.len(), fixture.expected_body_count);
+    assert_eq!(d1.houses.len(), fixture.expected_house_cusp_count);
 }
