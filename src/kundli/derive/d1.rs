@@ -1,8 +1,8 @@
 use crate::kundli::astro::{AstroResult, HouseSystem};
 use crate::kundli::config::KundliConfig;
 use crate::kundli::derive::pipeline::{
-    CuspBasedHouseTransform, IdentityProjection, IdentitySignTransform, LagnaReference, Pipeline,
-    WholeSignHouseTransform,
+    ChartPipeline, CuspBasedHouseTransform, IdentityProjection, IdentitySignTransform,
+    LagnaReference, WholeSignHouseTransform,
 };
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{ChartResult, D1Chart};
@@ -22,7 +22,7 @@ pub(crate) fn derive_d1_chart_result(
 ) -> Result<ChartResult, DeriveError> {
     let house_transform = match config.house_system {
         HouseSystem::WholeSign => {
-            return Pipeline::new(
+            return ChartPipeline::new(
                 IdentityProjection,
                 LagnaReference,
                 IdentitySignTransform,
@@ -33,7 +33,7 @@ pub(crate) fn derive_d1_chart_result(
         house_system => CuspBasedHouseTransform { house_system },
     };
 
-    Pipeline::new(
+    ChartPipeline::new(
         IdentityProjection,
         LagnaReference,
         IdentitySignTransform,

@@ -4,7 +4,7 @@ use crate::kundli::model::ChartResult;
 
 use super::{HouseTransformOp, Materialize, ProjectionOp, ReferenceOp, SignTransformOp};
 
-pub(crate) struct Pipeline<P, R, ST, HT>
+pub(crate) struct ChartPipeline<P, R, ST, HT>
 where
     P: ProjectionOp,
     R: ReferenceOp<P::Output>,
@@ -18,7 +18,7 @@ where
     house_transform: HT,
 }
 
-impl<P, R, ST, HT> Pipeline<P, R, ST, HT>
+impl<P, R, ST, HT> ChartPipeline<P, R, ST, HT>
 where
     P: ProjectionOp,
     R: ReferenceOp<P::Output>,

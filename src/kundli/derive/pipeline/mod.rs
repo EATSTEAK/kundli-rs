@@ -5,7 +5,7 @@ mod projection;
 mod reference;
 mod sign;
 
-pub(crate) use core::Pipeline;
+pub(crate) use core::ChartPipeline;
 pub(crate) use house::{CuspBasedHouseTransform, HouseContext, HouseTransformOp, WholeSignHouseTransform};
 pub(crate) use materialize::Materialize;
 pub(crate) use projection::{IdentityProjection, ProjectedBase, ProjectionOp};
@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn d1_pipeline_materializes_chart_result() {
-        let pipeline = Pipeline::new(
+        let pipeline = ChartPipeline::new(
             IdentityProjection,
             LagnaReference,
             IdentitySignTransform,
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn d9_varga_transform_maps_longitudes() {
-        let pipeline = Pipeline::new(
+        let pipeline = ChartPipeline::new(
             IdentityProjection,
             LagnaReference,
             VargaTransform::<D9Rule>::new(),
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn moon_reference_reanchors_whole_sign_houses() {
-        let pipeline = Pipeline::new(
+        let pipeline = ChartPipeline::new(
             IdentityProjection,
             reference::MoonReference,
             IdentitySignTransform,
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn moon_reference_renumbers_cusp_based_houses() {
-        let pipeline = Pipeline::new(
+        let pipeline = ChartPipeline::new(
             IdentityProjection,
             reference::MoonReference,
             IdentitySignTransform,

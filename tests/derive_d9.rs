@@ -89,6 +89,25 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
 }
 
 #[test]
+fn derive_d9_chart_recomputes_nakshatra_progress_after_navamsa_transform() {
+    let astro = AstroResult {
+        bodies: full_bodies(&[(AstroBody::Moon, 5.0, 13.0)]),
+        ascendant_longitude: 10.0,
+        mc_longitude: 100.0,
+        house_cusps: [0.0; 12],
+        meta: sample_meta(),
+    };
+
+    let chart = derive_d9_chart(&astro, &KundliConfig::default()).unwrap();
+    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
+
+    assert!((moon.longitude - 45.0).abs() < EPSILON);
+    assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Rohini);
+    assert_eq!(moon.nakshatra.pada, Pada::new(2).unwrap());
+    assert!((moon.nakshatra.degrees_in_nakshatra - (45.0 - (360.0 / 27.0 * 3.0))).abs() < EPSILON);
+}
+
+#[test]
 fn derive_d9_chart_handles_navamsa_boundaries_across_sign_modalities() {
     let astro = AstroResult {
         bodies: full_bodies(&[

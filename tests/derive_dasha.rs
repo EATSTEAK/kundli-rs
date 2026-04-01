@@ -99,6 +99,24 @@ fn derive_vimshottari_dasha_wraps_sequence_after_mercury() {
 }
 
 #[test]
+fn derive_vimshottari_dasha_uses_moon_nakshatra_progress_from_astro_result() {
+    let astro = AstroResult {
+        bodies: full_bodies(&[(AstroBody::Moon, 5.0)]),
+        ascendant_longitude: 0.0,
+        mc_longitude: 90.0,
+        house_cusps: [0.0; 12],
+        meta: sample_meta(2451545.0),
+    };
+
+    let dasha = derive_vimshottari_dasha(&astro).unwrap();
+
+    assert_eq!(dasha.moon_nakshatra, Nakshatra::Ashwini);
+    assert_eq!(dasha.current_mahadasha.lord, DashaLord::Ketu);
+    assert!((dasha.current_mahadasha.end_jd_ut - dasha.current_mahadasha.start_jd_ut - 7.0 * DAYS_PER_YEAR).abs() < EPSILON);
+    assert_eq!(dasha.mahadashas[0].lord, dasha.current_mahadasha.lord);
+}
+
+#[test]
 fn derive_vimshottari_dasha_rejects_non_sidereal_astro_results() {
     let astro = AstroResult {
         bodies: full_bodies(&[(AstroBody::Moon, 10.0)]),

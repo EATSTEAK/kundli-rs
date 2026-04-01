@@ -1,7 +1,7 @@
 use crate::kundli::astro::{AstroResult, HouseSystem};
 use crate::kundli::config::KundliConfig;
 use crate::kundli::derive::pipeline::{
-    D9Rule, IdentityProjection, LagnaReference, Pipeline, VargaTransform,
+    ChartPipeline, D9Rule, IdentityProjection, LagnaReference, VargaTransform,
     WholeSignHouseTransform,
 };
 use crate::kundli::error::DeriveError;
@@ -27,7 +27,7 @@ pub(crate) fn derive_d9_chart_result(
         return Err(DeriveError::UnsupportedD9HouseSystem(config.house_system));
     }
 
-    Pipeline::new(
+    ChartPipeline::new(
         IdentityProjection,
         LagnaReference,
         VargaTransform::<D9Rule>::new(),
