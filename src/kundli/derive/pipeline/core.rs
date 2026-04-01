@@ -26,7 +26,12 @@ where
     HT: HouseTransformOp<ST::Output>,
     HT::Output: Materialize,
 {
-    pub(crate) fn new(projection: P, reference: R, sign_transform: ST, house_transform: HT) -> Self {
+    pub(crate) fn new(
+        projection: P,
+        reference: R,
+        sign_transform: ST,
+        house_transform: HT,
+    ) -> Self {
         Self {
             projection,
             reference,

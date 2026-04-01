@@ -1,6 +1,5 @@
-use crate::kundli::astro::{
-    AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType,
-};
+use crate::kundli::astro::{AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType};
+use crate::kundli::error::{ChartSelectionError, KundliError};
 
 /// Known high-level chart layers that can be requested from the public API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -86,6 +85,18 @@ impl KundliConfig {
         self.charts = charts.to_vec();
         self
     }
+
+    /// Validates and normalizes the requested chart layers.
+    pub fn validate(&mut self) -> Result<(), KundliError> {
+        if self.charts.is_empty() {
+            return Err(ChartSelectionError::Empty.into());
+        }
+
+        self.charts.sort();
+        self.charts.dedup();
+
+        Ok(())
+    }
 }
 
 impl Default for KundliConfig {
@@ -96,5 +107,39 @@ impl Default for KundliConfig {
             HouseSystem::WholeSign,
             NodeType::True,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_rejects_empty_chart_selection() {
+        let mut config = KundliConfig::default();
+
+        let error = config.validate().unwrap_err();
+
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(ChartSelectionError::Empty)
+        );
+    }
+
+    #[test]
+    fn validate_sorts_and_deduplicates_chart_selection() {
+        let mut config = KundliConfig::default().with_charts(&[
+            KnownChart::VimshottariDasha,
+            KnownChart::D1,
+            KnownChart::D1,
+            KnownChart::D9,
+        ]);
+
+        config.validate().unwrap();
+
+        assert_eq!(
+            config.charts,
+            vec![KnownChart::D1, KnownChart::D9, KnownChart::VimshottariDasha]
+        );
     }
 }

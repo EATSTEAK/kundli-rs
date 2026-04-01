@@ -68,6 +68,20 @@ impl AstroBody {
         Self::Rahu,
         Self::Ketu,
     ];
+
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Sun => 0,
+            Self::Moon => 1,
+            Self::Mars => 2,
+            Self::Mercury => 3,
+            Self::Jupiter => 4,
+            Self::Venus => 5,
+            Self::Saturn => 6,
+            Self::Rahu => 7,
+            Self::Ketu => 8,
+        }
+    }
 }
 
 /// Input required to calculate raw astronomical positions.
@@ -191,5 +205,4 @@ mod tests {
             Err(AstroError::InvalidCoordinates { .. })
         ));
     }
-
 }

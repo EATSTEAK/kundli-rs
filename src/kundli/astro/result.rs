@@ -37,6 +37,7 @@ pub struct AstroMeta {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroResult {
     /// Canonical body positions for Sun..Ketu, always in [`AstroBody::ALL`] order.
+    /// Use [`AstroResult::body`] for enum-addressed lookup by canonical slot.
     pub bodies: [AstroBodyPosition; BODY_COUNT],
     /// Ascendant longitude in degrees.
     pub ascendant_longitude: f64,
@@ -50,9 +51,52 @@ pub struct AstroResult {
 
 impl AstroResult {
     pub fn body(&self, body: AstroBody) -> &AstroBodyPosition {
-        self.bodies
-            .iter()
-            .find(|position| position.body == body)
-            .expect("AstroResult must contain every AstroBody exactly once")
+        let position = &self.bodies[body.index()];
+        debug_assert_eq!(position.body, body);
+        position
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_body(body: AstroBody, longitude: f64) -> AstroBodyPosition {
+        AstroBodyPosition {
+            body,
+            longitude,
+            latitude: 0.0,
+            distance: 1.0,
+            speed_longitude: 0.0,
+        }
+    }
+
+    #[test]
+    fn body_uses_canonical_slot_lookup() {
+        let bodies = std::array::from_fn(|index| {
+            let body = AstroBody::ALL[index];
+            sample_body(body, index as f64 * 10.0)
+        });
+        let result = AstroResult {
+            bodies,
+            ascendant_longitude: 0.0,
+            mc_longitude: 0.0,
+            house_cusps: [0.0; HOUSE_CUSP_COUNT],
+            meta: AstroMeta {
+                jd_ut: 2451545.0,
+                zodiac: ZodiacType::Sidereal,
+                ayanamsha: Ayanamsha::Lahiri,
+                ayanamsha_value: Some(24.0),
+                sidereal_time: 12.0,
+            },
+        };
+
+        let moon = result.body(AstroBody::Moon);
+        let ketu = result.body(AstroBody::Ketu);
+
+        assert_eq!(moon.body, AstroBody::Moon);
+        assert_eq!(moon.longitude, 10.0);
+        assert_eq!(ketu.body, AstroBody::Ketu);
+        assert_eq!(ketu.longitude, 80.0);
     }
 }

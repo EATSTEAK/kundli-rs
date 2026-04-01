@@ -2,6 +2,23 @@ use std::fmt;
 
 use crate::kundli::astro::{AstroError, HouseSystem, ZodiacType};
 
+/// Invalid high-level chart selection declared in [`crate::kundli::config::KundliConfig`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChartSelectionError {
+    /// At least one chart layer must be requested.
+    Empty,
+}
+
+impl fmt::Display for ChartSelectionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => write!(f, "at least one chart must be requested"),
+        }
+    }
+}
+
+impl std::error::Error for ChartSelectionError {}
+
 /// Errors returned while deriving kundli-specific structures from astronomical
 /// output.
 #[derive(Debug, Clone, PartialEq)]
@@ -95,6 +112,8 @@ pub enum KundliError {
     Astro(AstroError),
     /// A kundli-specific derive step failed.
     Derive(DeriveError),
+    /// The requested chart selection is invalid.
+    ChartSelection(ChartSelectionError),
     /// Settings duplicated between request and config did not match.
     InputConfigMismatch(InputConfigMismatchField),
 }
@@ -104,6 +123,7 @@ impl fmt::Display for KundliError {
         match self {
             Self::Astro(err) => err.fmt(f),
             Self::Derive(err) => err.fmt(f),
+            Self::ChartSelection(err) => write!(f, "invalid chart selection: {err}"),
             Self::InputConfigMismatch(field) => write!(f, "input/config mismatch: {field}"),
         }
     }
@@ -114,6 +134,7 @@ impl std::error::Error for KundliError {
         match self {
             Self::Astro(err) => Some(err),
             Self::Derive(err) => Some(err),
+            Self::ChartSelection(err) => Some(err),
             Self::InputConfigMismatch(_) => None,
         }
     }
@@ -128,5 +149,11 @@ impl From<AstroError> for KundliError {
 impl From<DeriveError> for KundliError {
     fn from(value: DeriveError) -> Self {
         Self::Derive(value)
+    }
+}
+
+impl From<ChartSelectionError> for KundliError {
+    fn from(value: ChartSelectionError) -> Self {
+        Self::ChartSelection(value)
     }
 }

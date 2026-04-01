@@ -28,7 +28,7 @@ pub(crate) fn derive_d1_chart_result(
                 IdentitySignTransform,
                 WholeSignHouseTransform,
             )
-            .execute(astro.clone())
+            .execute(astro.clone());
         }
         house_system => CuspBasedHouseTransform { house_system },
     };

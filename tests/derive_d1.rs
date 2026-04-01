@@ -35,7 +35,10 @@ fn sample_body(body: AstroBody, longitude: f64, speed_longitude: f64) -> AstroBo
 fn full_bodies(overrides: &[(AstroBody, f64, f64)]) -> [AstroBodyPosition; 9] {
     std::array::from_fn(|index| {
         let body = AstroBody::ALL[index];
-        if let Some((_, longitude, speed_longitude)) = overrides.iter().find(|(candidate, _, _)| *candidate == body) {
+        if let Some((_, longitude, speed_longitude)) = overrides
+            .iter()
+            .find(|(candidate, _, _)| *candidate == body)
+        {
             sample_body(body, *longitude, *speed_longitude)
         } else {
             sample_body(body, 180.0 + index as f64, 0.1)
@@ -82,20 +85,32 @@ fn derive_d1_chart_whole_sign_derives_lagna_planets_and_houses() {
     assert!((chart.lagna.longitude - 45.0).abs() < EPSILON);
     assert_eq!(chart.planets.len(), AstroBody::ALL.len());
 
-    let sun = chart.planets.iter().find(|planet| planet.body == AstroBody::Sun).unwrap();
+    let sun = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Sun)
+        .unwrap();
     assert_eq!(sun.sign, Sign::Taurus);
     assert!((sun.degrees_in_sign - 20.0).abs() < EPSILON);
     assert_eq!(sun.house, house(1));
     assert!(!sun.is_retrograde);
 
-    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
+    let moon = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Moon)
+        .unwrap();
     assert_eq!(moon.sign, Sign::Aries);
     assert!((moon.degrees_in_sign - 5.0).abs() < EPSILON);
     assert_eq!(moon.house, house(12));
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Ashwini);
     assert_eq!(moon.nakshatra.pada, Pada::new(2).unwrap());
 
-    let saturn = chart.planets.iter().find(|planet| planet.body == AstroBody::Saturn).unwrap();
+    let saturn = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Saturn)
+        .unwrap();
     assert_eq!(saturn.sign, Sign::Cancer);
     assert!((saturn.degrees_in_sign - 5.0).abs() < EPSILON);
     assert_eq!(saturn.house, house(3));
@@ -125,7 +140,11 @@ fn derive_d1_chart_uses_cusps_for_non_whole_sign_systems() {
 
     let chart = derive_d1_chart(&astro, &config).unwrap();
 
-    let mercury = chart.planets.iter().find(|planet| planet.body == AstroBody::Mercury).unwrap();
+    let mercury = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Mercury)
+        .unwrap();
     assert_eq!(mercury.sign, Sign::Gemini);
     assert_eq!(mercury.house, house(1));
 

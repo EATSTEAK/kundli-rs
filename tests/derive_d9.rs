@@ -36,7 +36,10 @@ fn sample_body(body: AstroBody, longitude: f64, speed_longitude: f64) -> AstroBo
 fn full_bodies(overrides: &[(AstroBody, f64, f64)]) -> [AstroBodyPosition; 9] {
     std::array::from_fn(|index| {
         let body = AstroBody::ALL[index];
-        if let Some((_, longitude, speed_longitude)) = overrides.iter().find(|(candidate, _, _)| *candidate == body) {
+        if let Some((_, longitude, speed_longitude)) = overrides
+            .iter()
+            .find(|(candidate, _, _)| *candidate == body)
+        {
             sample_body(body, *longitude, *speed_longitude)
         } else {
             sample_body(body, 180.0 + index as f64, 0.1)
@@ -65,14 +68,22 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert!((chart.lagna.degrees_in_sign - 15.0).abs() < EPSILON);
     assert!((chart.lagna.longitude - 45.0).abs() < EPSILON);
 
-    let sun = chart.planets.iter().find(|planet| planet.body == AstroBody::Sun).unwrap();
+    let sun = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Sun)
+        .unwrap();
     assert_eq!(sun.sign, Sign::Leo);
     assert!((sun.longitude - 135.0).abs() < EPSILON);
     assert!((sun.degrees_in_sign - 15.0).abs() < EPSILON);
     assert_eq!(sun.house, house(4));
     assert!(!sun.is_retrograde);
 
-    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
+    let moon = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Moon)
+        .unwrap();
     assert_eq!(moon.sign, Sign::Aries);
     assert!(moon.longitude.abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
@@ -80,7 +91,11 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Ashwini);
     assert_eq!(moon.nakshatra.pada, Pada::new(1).unwrap());
 
-    let saturn = chart.planets.iter().find(|planet| planet.body == AstroBody::Saturn).unwrap();
+    let saturn = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Saturn)
+        .unwrap();
     assert_eq!(saturn.sign, Sign::Capricorn);
     assert!((saturn.longitude - 288.0).abs() < EPSILON);
     assert!((saturn.degrees_in_sign - 18.0).abs() < EPSILON);
@@ -99,7 +114,11 @@ fn derive_d9_chart_recomputes_nakshatra_progress_after_navamsa_transform() {
     };
 
     let chart = derive_d9_chart(&astro, &KundliConfig::default()).unwrap();
-    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
+    let moon = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Moon)
+        .unwrap();
 
     assert!((moon.longitude - 45.0).abs() < EPSILON);
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Rohini);
@@ -123,19 +142,31 @@ fn derive_d9_chart_handles_navamsa_boundaries_across_sign_modalities() {
 
     let chart = derive_d9_chart(&astro, &KundliConfig::default()).unwrap();
 
-    let sun = chart.planets.iter().find(|planet| planet.body == AstroBody::Sun).unwrap();
+    let sun = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Sun)
+        .unwrap();
     assert_eq!(sun.sign, Sign::Taurus);
     assert!((sun.longitude - 30.0).abs() < EPSILON);
     assert!(sun.degrees_in_sign.abs() < EPSILON);
     assert_eq!(sun.house, house(2));
 
-    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
+    let moon = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Moon)
+        .unwrap();
     assert_eq!(moon.sign, Sign::Capricorn);
     assert!((moon.longitude - 270.0).abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
     assert_eq!(moon.house, house(10));
 
-    let mercury = chart.planets.iter().find(|planet| planet.body == AstroBody::Mercury).unwrap();
+    let mercury = chart
+        .planets
+        .iter()
+        .find(|planet| planet.body == AstroBody::Mercury)
+        .unwrap();
     assert_eq!(mercury.sign, Sign::Libra);
     assert!((mercury.longitude - 180.0).abs() < EPSILON);
     assert!(mercury.degrees_in_sign.abs() < EPSILON);
@@ -155,7 +186,10 @@ fn derive_d9_chart_rejects_non_whole_sign_house_systems() {
 
     let error = derive_d9_chart(&astro, &config).unwrap_err();
 
-    assert_eq!(error, DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal));
+    assert_eq!(
+        error,
+        DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal)
+    );
 }
 
 #[test]

@@ -61,7 +61,11 @@ fn derive_vimshottari_dasha_derives_current_period_and_full_sequence() {
     assert_eq!(dasha.mahadashas.len(), 9);
     assert_eq!(dasha.mahadashas[0], dasha.current_mahadasha);
     assert_eq!(
-        dasha.mahadashas.iter().map(|period| period.lord).collect::<Vec<_>>(),
+        dasha
+            .mahadashas
+            .iter()
+            .map(|period| period.lord)
+            .collect::<Vec<_>>(),
         vec![
             DashaLord::Ketu,
             DashaLord::Venus,
@@ -112,7 +116,13 @@ fn derive_vimshottari_dasha_uses_moon_nakshatra_progress_from_astro_result() {
 
     assert_eq!(dasha.moon_nakshatra, Nakshatra::Ashwini);
     assert_eq!(dasha.current_mahadasha.lord, DashaLord::Ketu);
-    assert!((dasha.current_mahadasha.end_jd_ut - dasha.current_mahadasha.start_jd_ut - 7.0 * DAYS_PER_YEAR).abs() < EPSILON);
+    assert!(
+        (dasha.current_mahadasha.end_jd_ut
+            - dasha.current_mahadasha.start_jd_ut
+            - 7.0 * DAYS_PER_YEAR)
+            .abs()
+            < EPSILON
+    );
     assert_eq!(dasha.mahadashas[0].lord, dasha.current_mahadasha.lord);
 }
 

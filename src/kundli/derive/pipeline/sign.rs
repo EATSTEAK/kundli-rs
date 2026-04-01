@@ -49,7 +49,9 @@ impl SignTransformOp<ReferenceContext> for IdentitySignTransform {
                 .projected
                 .bodies
                 .iter()
-                .map(|body| build_sign_placement(Some(body.body), body.longitude, body.is_retrograde))
+                .map(|body| {
+                    build_sign_placement(Some(body.body), body.longitude, body.is_retrograde)
+                })
                 .collect::<Result<Vec<_>, _>>()?,
             house_cusps: input.projected.house_cusps.clone(),
         })
@@ -95,12 +97,22 @@ where
                 point: input.reference.point,
                 longitude: R::map(input.reference.longitude)?,
             },
-            ascendant: build_sign_placement(None, R::map(input.projected.ascendant_longitude)?, false)?,
+            ascendant: build_sign_placement(
+                None,
+                R::map(input.projected.ascendant_longitude)?,
+                false,
+            )?,
             bodies: input
                 .projected
                 .bodies
                 .iter()
-                .map(|body| build_sign_placement(Some(body.body), R::map(body.longitude)?, body.is_retrograde))
+                .map(|body| {
+                    build_sign_placement(
+                        Some(body.body),
+                        R::map(body.longitude)?,
+                        body.is_retrograde,
+                    )
+                })
                 .collect::<Result<Vec<_>, _>>()?,
             house_cusps: input.projected.house_cusps.clone(),
         })

@@ -56,15 +56,17 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
     config: &KundliConfig,
 ) -> Result<KundliResult, KundliError> {
     request.validate()?;
-    validate_request_matches_config(request, config)?;
+    let mut config = config.clone();
+    config.validate()?;
+    validate_request_matches_config(request, &config)?;
 
     let astro = engine.calculate(request)?;
     let mut charts = BTreeMap::new();
 
     for chart in &config.charts {
         let layer = match chart {
-            KnownChart::D1 => ChartLayer::D1(derive_d1_chart_result(&astro, config)?.into()),
-            KnownChart::D9 => ChartLayer::D9(derive_d9_chart_result(&astro, config)?.into()),
+            KnownChart::D1 => ChartLayer::D1(derive_d1_chart_result(&astro, &config)?.into()),
+            KnownChart::D9 => ChartLayer::D9(derive_d9_chart_result(&astro, &config)?.into()),
             KnownChart::VimshottariDasha => {
                 ChartLayer::VimshottariDasha(derive_vimshottari_dasha(&astro)?)
             }
@@ -74,7 +76,7 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
     }
 
     Ok(KundliResult {
-        meta: build_calculation_meta(&astro, config),
+        meta: build_calculation_meta(&astro, &config),
         charts,
         warnings: vec![],
     })
@@ -221,7 +223,10 @@ mod tests {
         assert_eq!(result.meta.house_system, HouseSystem::WholeSign);
         assert_eq!(result.meta.node_type, NodeType::True);
         assert_eq!(result.meta.body_count, AstroBody::ALL.len());
-        let d1 = result.chart(KnownChart::D1).and_then(ChartLayer::as_d1).unwrap();
+        let d1 = result
+            .chart(KnownChart::D1)
+            .and_then(ChartLayer::as_d1)
+            .unwrap();
         assert_eq!(d1.lagna.sign, crate::kundli::model::Sign::Taurus);
         assert_eq!(
             d1.planets[1].nakshatra.nakshatra,
@@ -233,22 +238,23 @@ mod tests {
     }
 
     #[test]
-    fn calculate_with_engine_omits_optional_results_when_disabled() {
+    fn calculate_with_engine_rejects_empty_chart_requests() {
         let request = sample_request();
         let config = KundliConfig::from_request(&request);
         let engine = StubEngine {
             result: Ok(sample_astro()),
         };
 
-        let result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+        let error = calculate_kundli_with_engine(&engine, &request, &config).unwrap_err();
 
-        assert!(result.chart(KnownChart::D1).is_none());
-        assert!(result.chart(KnownChart::D9).is_none());
-        assert!(result.chart(KnownChart::VimshottariDasha).is_none());
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(crate::kundli::error::ChartSelectionError::Empty)
+        );
     }
 
     #[test]
-    fn calculate_with_engine_deduplicates_duplicate_chart_requests() {
+    fn calculate_with_engine_deduplicates_duplicate_chart_requests_via_config_validation() {
         let request = sample_request();
         let config = KundliConfig::from_request(&request).with_charts(&[
             KnownChart::D1,
@@ -290,7 +296,8 @@ mod tests {
             result: Ok(sample_astro()),
         };
 
-        let error = calculate_kundli_with_engine(&engine, &request, &sample_config(&request)).unwrap_err();
+        let error =
+            calculate_kundli_with_engine(&engine, &request, &sample_config(&request)).unwrap_err();
 
         assert!(matches!(
             error,

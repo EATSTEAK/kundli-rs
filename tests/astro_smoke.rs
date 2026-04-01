@@ -7,9 +7,9 @@ use kundli_rs::kundli::astro::{
 use kundli_rs::kundli::calculate::calculate_kundli_with_engine;
 use kundli_rs::kundli::config::{KnownChart, KundliConfig};
 use kundli_rs::kundli::derive::d1::derive_d1_chart;
-use kundli_rs::kundli::model::ChartLayer;
 use kundli_rs::kundli::derive::d9::derive_d9_chart;
 use kundli_rs::kundli::derive::dasha::derive_vimshottari_dasha;
+use kundli_rs::kundli::model::ChartLayer;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -100,7 +100,11 @@ fn smoke_fixture_returns_full_bodies_and_house_shape() {
     assert_eq!(result.bodies.len(), fixture.expected_body_count);
     assert_eq!(result.house_cusps.len(), fixture.expected_house_cusp_count);
     assert_eq!(
-        result.bodies.iter().map(|position| position.body).collect::<Vec<_>>(),
+        result
+            .bodies
+            .iter()
+            .map(|position| position.body)
+            .collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert!(result.ascendant_longitude.is_finite());
@@ -139,11 +143,17 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
     assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
     assert_eq!(
-        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d1.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert_eq!(
-        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d9.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert!(d1.lagna.longitude.is_finite());
@@ -174,11 +184,15 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
     assert_eq!(
-        final_result.chart(KnownChart::D1).and_then(ChartLayer::as_d1),
+        final_result
+            .chart(KnownChart::D1)
+            .and_then(ChartLayer::as_d1),
         Some(&manual_d1)
     );
     assert_eq!(
-        final_result.chart(KnownChart::D9).and_then(ChartLayer::as_d9),
+        final_result
+            .chart(KnownChart::D9)
+            .and_then(ChartLayer::as_d9),
         Some(&manual_d9)
     );
     assert_eq!(

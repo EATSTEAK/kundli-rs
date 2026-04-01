@@ -45,9 +45,16 @@ fn coordinate_validation_fixture_matches_expected_outcomes() {
         request.longitude = case.longitude;
 
         match case.expected.as_str() {
-            "ok" => assert!(request.validate().is_ok(), "fixture case failed: {}", case.name),
+            "ok" => assert!(
+                request.validate().is_ok(),
+                "fixture case failed: {}",
+                case.name
+            ),
             "invalid_coordinates" => assert!(
-                matches!(request.validate(), Err(AstroError::InvalidCoordinates { .. })),
+                matches!(
+                    request.validate(),
+                    Err(AstroError::InvalidCoordinates { .. })
+                ),
                 "fixture case failed: {}",
                 case.name
             ),

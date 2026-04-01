@@ -54,11 +54,7 @@ impl ReferenceOp<ProjectedBase> for MoonReference {
     type Output = ReferenceContext;
 
     fn apply(&self, input: &ProjectedBase) -> Result<Self::Output, DeriveError> {
-        let moon = input
-            .bodies
-            .iter()
-            .find(|body| body.body == AstroBody::Moon)
-            .ok_or(DeriveError::MissingMoon)?;
+        let moon = &input.bodies[AstroBody::Moon.index()];
 
         Ok(ReferenceContext {
             projected: input.clone(),

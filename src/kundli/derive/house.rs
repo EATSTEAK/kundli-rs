@@ -52,7 +52,8 @@ fn derive_house_whole_sign(
 
     // Safety: house_number is always in range 1-12 due to modulo
     debug_assert!((1..=12).contains(&house_number));
-    Ok(HouseNumber::new(house_number as u8).expect("whole-sign derived house must stay within 1..=12"))
+    Ok(HouseNumber::new(house_number as u8)
+        .expect("whole-sign derived house must stay within 1..=12"))
 }
 
 /// Derives house placement using house cusps.
@@ -226,7 +227,9 @@ mod tests {
     fn non_whole_sign_validates_ascendant_longitude() {
         let cusps: Vec<f64> = (0..12).map(|i| (i * 30) as f64).collect();
         let house_number = derive_house(15.0, f64::NAN, &cusps, HouseSystem::Equal);
-        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(value)) if value.is_nan()));
+        assert!(
+            matches!(house_number, Err(DeriveError::InvalidLongitude(value)) if value.is_nan())
+        );
     }
 
     #[test]
@@ -243,26 +246,38 @@ mod tests {
     #[test]
     fn invalid_longitude_returns_error() {
         let house_number = derive_house(f64::NAN, 15.0, &[], HouseSystem::WholeSign);
-        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
+        assert!(matches!(
+            house_number,
+            Err(DeriveError::InvalidLongitude(_))
+        ));
     }
 
     #[test]
     fn infinite_longitude_returns_error() {
         let house_number = derive_house(f64::INFINITY, 15.0, &[], HouseSystem::WholeSign);
-        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
+        assert!(matches!(
+            house_number,
+            Err(DeriveError::InvalidLongitude(_))
+        ));
     }
 
     #[test]
     fn wrong_number_of_cusps_returns_error() {
         let cusps = vec![0.0, 30.0, 60.0]; // Only 3 cusps
         let house_number = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
-        assert!(matches!(house_number, Err(DeriveError::InvalidHouseCusps(3))));
+        assert!(matches!(
+            house_number,
+            Err(DeriveError::InvalidHouseCusps(3))
+        ));
     }
 
     #[test]
     fn empty_cusps_returns_error() {
         let house_number = derive_house(45.0, 0.0, &[], HouseSystem::Equal);
-        assert!(matches!(house_number, Err(DeriveError::InvalidHouseCusps(0))));
+        assert!(matches!(
+            house_number,
+            Err(DeriveError::InvalidHouseCusps(0))
+        ));
     }
 
     #[test]
@@ -282,7 +297,10 @@ mod tests {
             330.0,
         ];
         let house_number = derive_house(45.0, 0.0, &cusps, HouseSystem::Equal);
-        assert!(matches!(house_number, Err(DeriveError::InvalidLongitude(_))));
+        assert!(matches!(
+            house_number,
+            Err(DeriveError::InvalidLongitude(_))
+        ));
     }
 
     #[test]
@@ -316,7 +334,12 @@ mod tests {
             let planet_sign = house_num - 1; // 0-indexed sign
             let planet_lon = (planet_sign as f64) * 30.0 + 15.0; // Middle of each sign
             let house_number = derive_house(planet_lon, 0.0, &[], HouseSystem::WholeSign);
-            assert_eq!(house_number.unwrap(), house(house_num), "Failed for house {}", house_num);
+            assert_eq!(
+                house_number.unwrap(),
+                house(house_num),
+                "Failed for house {}",
+                house_num
+            );
         }
     }
 }

@@ -6,16 +6,22 @@ mod reference;
 mod sign;
 
 pub(crate) use core::ChartPipeline;
-pub(crate) use house::{CuspBasedHouseTransform, HouseContext, HouseTransformOp, WholeSignHouseTransform};
+pub(crate) use house::{
+    CuspBasedHouseTransform, HouseContext, HouseTransformOp, WholeSignHouseTransform,
+};
 pub(crate) use materialize::Materialize;
 pub(crate) use projection::{IdentityProjection, ProjectedBase, ProjectionOp};
 pub(crate) use reference::{LagnaReference, ReferenceContext, ReferenceOp, ResolvedReference};
-pub(crate) use sign::{D9Rule, IdentitySignTransform, SignContext, SignPlacement, SignTransformOp, VargaTransform};
+pub(crate) use sign::{
+    D9Rule, IdentitySignTransform, SignContext, SignPlacement, SignTransformOp, VargaTransform,
+};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kundli::astro::{AstroBody, AstroBodyPosition, AstroMeta, AstroResult, Ayanamsha, ZodiacType};
+    use crate::kundli::astro::{
+        AstroBody, AstroBodyPosition, AstroMeta, AstroResult, Ayanamsha, ZodiacType,
+    };
     use crate::kundli::model::Sign;
 
     fn sample_result() -> AstroResult {
@@ -115,7 +121,9 @@ mod tests {
         );
 
         let mut result = sample_result();
-        result.house_cusps = [0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0];
+        result.house_cusps = [
+            0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0,
+        ];
 
         let chart = pipeline.execute(result).unwrap();
 

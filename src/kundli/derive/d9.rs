@@ -35,4 +35,3 @@ pub(crate) fn derive_d9_chart_result(
     )
     .execute(astro.clone())
 }
-

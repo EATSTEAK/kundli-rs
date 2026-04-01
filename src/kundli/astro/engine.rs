@@ -90,7 +90,10 @@ mod tests {
         let request = sample_request();
         let result = engine.calculate(&request).unwrap();
 
-        assert_eq!(result.bodies.len(), crate::kundli::astro::AstroBody::ALL.len());
+        assert_eq!(
+            result.bodies.len(),
+            crate::kundli::astro::AstroBody::ALL.len()
+        );
         assert_eq!(result.house_cusps.len(), 12);
         assert!(result.ascendant_longitude >= 0.0);
         assert!(result.mc_longitude >= 0.0);
@@ -104,6 +107,9 @@ mod tests {
 
         let result = engine.calculate(&sample_request()).unwrap();
 
-        assert_eq!(result.bodies.len(), crate::kundli::astro::AstroBody::ALL.len());
+        assert_eq!(
+            result.bodies.len(),
+            crate::kundli::astro::AstroBody::ALL.len()
+        );
     }
 }
