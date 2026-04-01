@@ -12,6 +12,8 @@ const DEGREES_PER_NAKSHATRA: f64 = 360.0 / 27.0;
 fn sample_meta(jd_ut: f64) -> AstroMeta {
     AstroMeta {
         jd_ut,
+        latitude: 37.5665,
+        longitude: 126.9780,
         zodiac: ZodiacType::Sidereal,
         ayanamsha: Ayanamsha::Lahiri,
         ayanamsha_value: Some(24.0),

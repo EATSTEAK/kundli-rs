@@ -5,6 +5,9 @@ use crate::kundli::error::DeriveError;
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ProjectedBase {
     pub zodiac: ZodiacType,
+    pub jd_ut: f64,
+    pub latitude: f64,
+    pub longitude: f64,
     pub ascendant_longitude: f64,
     pub house_cusps: Vec<f64>,
     pub bodies: Vec<ProjectedBody>,
@@ -32,6 +35,9 @@ impl ProjectionOp for IdentityProjection {
     fn apply(&self, input: AstroResult) -> Result<Self::Output, DeriveError> {
         Ok(ProjectedBase {
             zodiac: input.meta.zodiac,
+            jd_ut: input.meta.jd_ut,
+            latitude: input.meta.latitude,
+            longitude: input.meta.longitude,
             ascendant_longitude: normalize_longitude(input.ascendant_longitude)?,
             house_cusps: input
                 .house_cusps
@@ -67,6 +73,9 @@ impl ProjectionOp for SiderealProjection {
 
         Ok(ProjectedBase {
             zodiac: ZodiacType::Sidereal,
+            jd_ut: input.meta.jd_ut,
+            latitude: input.meta.latitude,
+            longitude: input.meta.longitude,
             ascendant_longitude: project(input.ascendant_longitude)?,
             house_cusps: input
                 .house_cusps

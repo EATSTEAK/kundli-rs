@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::kundli::astro::{AstroBody, Ayanamsha, HouseSystem, NodeType, ZodiacType};
-use crate::kundli::config::ChartSpec;
+use crate::kundli::config::{ChartSpec, SpecialReference};
 
 /// The twelve zodiac signs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -124,11 +124,21 @@ pub struct HouseResult {
 }
 
 /// Common chart result shape produced by the derive pipeline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChartStyle {
+    Standard,
+    Bhava,
+    Chalit,
+    DivisionalBhava,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChartResult {
+    pub style: ChartStyle,
     pub lagna: LagnaResult,
     pub planets: Vec<PlanetPlacement>,
     pub houses: Vec<HouseResult>,
+    pub reference: Option<ReferenceResult>,
 }
 
 /// The primary natal chart layer derived from the astronomical result.
@@ -222,6 +232,21 @@ pub struct CalculationMeta {
 pub struct CalculationWarning {
     pub code: &'static str,
     pub message: &'static str,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReferenceResult {
+    Planet {
+        body: AstroBody,
+        longitude: f64,
+    },
+    Special {
+        kind: SpecialReference,
+        longitude: f64,
+    },
+    Lagna {
+        longitude: f64,
+    },
 }
 
 /// A chart-layer payload stored in the high-level multi-chart response.

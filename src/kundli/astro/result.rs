@@ -23,6 +23,10 @@ pub struct AstroBodyPosition {
 pub struct AstroMeta {
     /// The requested Julian day in Universal Time.
     pub jd_ut: f64,
+    /// Request latitude in degrees.
+    pub latitude: f64,
+    /// Request longitude in degrees.
+    pub longitude: f64,
     /// Zodiac mode used for the calculation.
     pub zodiac: ZodiacType,
     /// Ayanamsha used for sidereal calculations.
@@ -84,6 +88,8 @@ mod tests {
             house_cusps: [0.0; HOUSE_CUSP_COUNT],
             meta: AstroMeta {
                 jd_ut: 2451545.0,
+                latitude: 37.5665,
+                longitude: 126.9780,
                 zodiac: ZodiacType::Sidereal,
                 ayanamsha: Ayanamsha::Lahiri,
                 ayanamsha_value: Some(24.0),

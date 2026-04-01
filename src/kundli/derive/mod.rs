@@ -11,4 +11,5 @@ pub mod dasha;
 pub(crate) mod house;
 pub(crate) mod nakshatra;
 pub mod pipeline;
+pub(crate) mod reference_points;
 pub(crate) mod sign;

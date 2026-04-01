@@ -233,7 +233,7 @@ fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
 }
 
 #[test]
-fn smoke_fixture_rasi_bhava_and_chalit_currently_materialize_the_same_chart() {
+fn smoke_fixture_rasi_bhava_and_chalit_now_expose_distinct_styles() {
     let fixture = load_fixture();
     let request = build_request(&fixture).with_house_system(HouseSystem::Placidus);
     let config = KundliConfig::from_request(&request).with_charts(&[
@@ -257,6 +257,9 @@ fn smoke_fixture_rasi_bhava_and_chalit_currently_materialize_the_same_chart() {
         .and_then(ChartLayer::as_chart)
         .unwrap();
 
-    assert_eq!(rasi, bhava);
-    assert_eq!(rasi, chalit);
+    assert_ne!(rasi.style, bhava.style);
+    assert_ne!(rasi.style, chalit.style);
+    assert_ne!(bhava.style, chalit.style);
+    assert_eq!(rasi.planets, bhava.planets);
+    assert_eq!(rasi.planets, chalit.planets);
 }

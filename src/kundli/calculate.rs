@@ -17,7 +17,7 @@ use crate::kundli::derive::pipeline::{
 use crate::kundli::error::{DeriveError, InputConfigMismatchField, KundliError};
 use std::collections::BTreeMap;
 
-use crate::kundli::model::{CalculationMeta, ChartLayer, ChartResult, KundliResult};
+use crate::kundli::model::{CalculationMeta, ChartLayer, ChartResult, ChartStyle, KundliResult};
 
 pub fn calculate_kundli(
     request: AstroRequest,
@@ -72,9 +72,6 @@ fn derive_chart_result(
     config: &KundliConfig,
     chart: ChartSpec,
 ) -> Result<ChartResult, DeriveError> {
-    // Bhava/Chalit currently share the same pipeline assembly as Rasi; the
-    // distinct chart kinds remain semantic placeholders until they gain their
-    // own result-shaping behavior.
     if matches!(
         chart.kind,
         ChartKind::Varga { .. } | ChartKind::DivisionalBhava { .. }
@@ -84,8 +81,7 @@ fn derive_chart_result(
     }
 
     let reference = ReferenceTransform::new(chart.reference);
-
-    match chart.kind {
+    let mut result = match chart.kind {
         ChartKind::Rasi | ChartKind::Bhava | ChartKind::Chalit => {
             match resolve_house_mode(chart, config)? {
                 ResolvedHouseMode::WholeSign => ChartPipeline::new(
@@ -140,7 +136,17 @@ fn derive_chart_result(
             ResolvedHouseMode::None => unreachable!("divisional bhava charts must expose houses"),
         },
         ChartKind::VimshottariDasha => unreachable!("handled separately"),
-    }
+    }?;
+
+    result.style = match chart.kind {
+        ChartKind::Rasi | ChartKind::Varga { .. } => ChartStyle::Standard,
+        ChartKind::Bhava => ChartStyle::Bhava,
+        ChartKind::Chalit => ChartStyle::Chalit,
+        ChartKind::DivisionalBhava { .. } => ChartStyle::DivisionalBhava,
+        ChartKind::VimshottariDasha => unreachable!("handled separately"),
+    };
+
+    Ok(result)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +300,8 @@ mod tests {
             house_cusps: [0.0; 12],
             meta: AstroMeta {
                 jd_ut: 2451545.0,
+                latitude: 37.5665,
+                longitude: 126.9780,
                 zodiac: ZodiacType::Sidereal,
                 ayanamsha: Ayanamsha::Lahiri,
                 ayanamsha_value: Some(24.0),

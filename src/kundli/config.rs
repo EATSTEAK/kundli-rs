@@ -1,6 +1,11 @@
 use crate::kundli::astro::{AstroBody, AstroRequest, Ayanamsha, HouseSystem, NodeType, ZodiacType};
 use crate::kundli::error::{ChartSelectionError, KundliError};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SpecialReference {
+    Gulika,
+}
+
 /// High-level chart family requested from the public API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ChartKind {
@@ -25,6 +30,7 @@ pub enum ReferenceKey {
     Moon,
     Sun,
     Planet(AstroBody),
+    Special(SpecialReference),
 }
 
 /// House derivation mode for a chart request.
@@ -71,6 +77,22 @@ impl ChartSpec {
 
     pub const fn sun_chart() -> Self {
         Self::new(ChartKind::Rasi, ReferenceKey::Sun, HouseMode::Configured)
+    }
+
+    pub const fn jupiter_bhava() -> Self {
+        Self::new(
+            ChartKind::Bhava,
+            ReferenceKey::Planet(AstroBody::Jupiter),
+            HouseMode::CuspBased(HouseSystem::Placidus),
+        )
+    }
+
+    pub const fn gulika_bhava() -> Self {
+        Self::new(
+            ChartKind::Bhava,
+            ReferenceKey::Special(SpecialReference::Gulika),
+            HouseMode::CuspBased(HouseSystem::Placidus),
+        )
     }
 
     pub const fn d9() -> Self {

@@ -1,4 +1,5 @@
-use crate::kundli::config::ReferenceKey;
+use crate::kundli::config::{ReferenceKey, SpecialReference};
+use crate::kundli::derive::reference_points::gulika_longitude;
 use crate::kundli::error::DeriveError;
 
 use super::ProjectedBase;
@@ -7,6 +8,7 @@ use super::ProjectedBase;
 pub(crate) enum ReferencePoint {
     Lagna,
     Planet(crate::kundli::astro::AstroBody),
+    Special(SpecialReference),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -80,6 +82,10 @@ impl ReferenceOp<ProjectedBase> for ReferenceTransform {
                     longitude: placement.longitude,
                 }
             }
+            ReferenceKey::Special(SpecialReference::Gulika) => ResolvedReference {
+                point: ReferencePoint::Special(SpecialReference::Gulika),
+                longitude: gulika_longitude(input)?,
+            },
         };
 
         Ok(ReferenceContext {

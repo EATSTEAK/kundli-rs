@@ -16,6 +16,8 @@ fn house(number: u8) -> HouseNumber {
 fn sample_meta() -> AstroMeta {
     AstroMeta {
         jd_ut: 2451545.0,
+        latitude: 37.5665,
+        longitude: 126.9780,
         zodiac: ZodiacType::Sidereal,
         ayanamsha: Ayanamsha::Lahiri,
         ayanamsha_value: Some(24.0),

@@ -10,6 +10,7 @@ const NUM_HOUSES: usize = 12;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct HouseContext {
+    pub reference: super::ResolvedReference,
     pub ascendant: SignPlacement,
     pub ascendant_house: HouseNumber,
     pub bodies: Vec<HousedPlacement>,
@@ -46,6 +47,7 @@ impl HouseTransformOp<SignContext> for WholeSignHouseTransform {
         let first_house_cusp = sign_start_longitude(input.reference.longitude)?;
 
         Ok(HouseContext {
+            reference: input.reference.clone(),
             ascendant: input.ascendant.clone(),
             ascendant_house,
             bodies: input
@@ -123,6 +125,7 @@ impl HouseTransformOp<SignContext> for CuspBasedHouseTransform {
             .collect::<Result<Vec<_>, DeriveError>>()?;
 
         Ok(HouseContext {
+            reference: input.reference.clone(),
             ascendant: input.ascendant.clone(),
             ascendant_house,
             bodies,

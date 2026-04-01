@@ -54,6 +54,7 @@ pub enum DeriveError {
     InvalidDivision(u8),
     UnsupportedZodiac(ZodiacType),
     UnsupportedHouseSystem(HouseSystem),
+    SpecialPointCalculationFailed(&'static str),
 }
 
 impl fmt::Display for DeriveError {
@@ -101,6 +102,9 @@ impl fmt::Display for DeriveError {
                     f,
                     "unsupported house system for derive operation: {house_system:?}"
                 )
+            }
+            Self::SpecialPointCalculationFailed(point) => {
+                write!(f, "failed to calculate special reference point: {point}")
             }
         }
     }

@@ -68,6 +68,8 @@ impl AstroEngine for SwissEphAstroEngine {
             house_cusps: raw.houses.cusps,
             meta: AstroMeta {
                 jd_ut: request.jd_ut,
+                latitude: request.latitude,
+                longitude: request.longitude,
                 zodiac: request.zodiac,
                 ayanamsha: request.ayanamsha,
                 ayanamsha_value: raw.ayanamsha_value,

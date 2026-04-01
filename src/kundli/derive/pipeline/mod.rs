@@ -55,6 +55,8 @@ mod tests {
             house_cusps: [0.0; 12],
             meta: AstroMeta {
                 jd_ut: 2451545.0,
+                latitude: 37.5665,
+                longitude: 126.9780,
                 zodiac: ZodiacType::Sidereal,
                 ayanamsha: Ayanamsha::Lahiri,
                 ayanamsha_value: Some(24.0),
