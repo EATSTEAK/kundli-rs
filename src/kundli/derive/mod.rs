@@ -8,6 +8,7 @@
 pub mod d1;
 pub mod d9;
 pub mod dasha;
+pub mod pipeline;
 pub(crate) mod house;
 pub(crate) mod input;
 pub(crate) mod nakshatra;

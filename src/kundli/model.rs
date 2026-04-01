@@ -155,6 +155,17 @@ pub struct HouseResult {
     pub sign: Sign,
 }
 
+/// Common chart result shape produced by the derive pipeline.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChartResult {
+    /// Derived lagna.
+    pub lagna: LagnaResult,
+    /// Derived placements for requested bodies.
+    pub planets: Vec<PlanetPlacement>,
+    /// Derived houses according to the configured house system.
+    pub houses: Vec<HouseResult>,
+}
+
 /// The primary natal chart layer derived from the astronomical result.
 #[derive(Debug, Clone, PartialEq)]
 pub struct D1Chart {
@@ -173,6 +184,25 @@ pub struct D9Chart {
     pub lagna: LagnaResult,
     /// Derived D9 planet placements.
     pub planets: Vec<PlanetPlacement>,
+}
+
+impl From<ChartResult> for D1Chart {
+    fn from(value: ChartResult) -> Self {
+        Self {
+            lagna: value.lagna,
+            planets: value.planets,
+            houses: value.houses,
+        }
+    }
+}
+
+impl From<ChartResult> for D9Chart {
+    fn from(value: ChartResult) -> Self {
+        Self {
+            lagna: value.lagna,
+            planets: value.planets,
+        }
+    }
 }
 
 /// Lords used in the Vimshottari mahadasha cycle.

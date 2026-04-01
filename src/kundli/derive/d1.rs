@@ -2,9 +2,13 @@ use crate::kundli::astro::{AstroResult, HouseSystem};
 use crate::kundli::config::KundliConfig;
 use crate::kundli::derive::house::derive_house;
 use crate::kundli::derive::input::KundliDeriveInput;
+use crate::kundli::derive::pipeline::{
+    CuspBasedHouseTransform, IdentityProjection, IdentitySignTransform, LagnaReference, Pipeline,
+    WholeSignHouseTransform,
+};
 use crate::kundli::derive::sign::{normalize_longitude, sign_from_longitude};
 use crate::kundli::error::DeriveError;
-use crate::kundli::model::{D1Chart, HouseNumber, HouseResult, LagnaResult, PlanetPlacement};
+use crate::kundli::model::{ChartResult, D1Chart, HouseNumber, HouseResult, LagnaResult, PlanetPlacement};
 
 const DEGREES_PER_SIGN: f64 = 30.0;
 const NUM_HOUSES: usize = 12;
@@ -117,23 +121,37 @@ pub fn derive_houses(
     derive_houses_from_input(&input, config)
 }
 
-pub(crate) fn derive_d1_chart_from_input(
-    input: &KundliDeriveInput,
-    config: &KundliConfig,
-) -> Result<D1Chart, DeriveError> {
-    Ok(D1Chart {
-        lagna: derive_lagna_from_input(input)?,
-        planets: derive_planet_placements_from_input(input, config)?,
-        houses: derive_houses_from_input(input, config)?,
-    })
-}
-
 /// Derives a complete D1 chart from a raw astronomical result.
 ///
 /// This is a lower-level helper than [`crate::calculate_kundli`]. Prefer the
 /// high-level API unless you already have an [`AstroResult`] and only need the
 /// D1 layer.
 pub fn derive_d1_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D1Chart, DeriveError> {
-    let input = KundliDeriveInput::from_astro(astro)?;
-    derive_d1_chart_from_input(&input, config)
+    derive_d1_chart_result(astro, config).map(Into::into)
+}
+
+pub(crate) fn derive_d1_chart_result(
+    astro: &AstroResult,
+    config: &KundliConfig,
+) -> Result<ChartResult, DeriveError> {
+    let house_transform = match config.house_system {
+        HouseSystem::WholeSign => {
+            return Pipeline::new(
+                IdentityProjection,
+                LagnaReference,
+                IdentitySignTransform,
+                WholeSignHouseTransform,
+            )
+            .execute(astro.clone())
+        }
+        house_system => CuspBasedHouseTransform { house_system },
+    };
+
+    Pipeline::new(
+        IdentityProjection,
+        LagnaReference,
+        IdentitySignTransform,
+        house_transform,
+    )
+    .execute(astro.clone())
 }

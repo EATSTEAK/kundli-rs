@@ -6,6 +6,7 @@ use crate::kundli::derive::sign::{degrees_in_sign, normalize_longitude, sign_fro
 use crate::kundli::error::DeriveError;
 use crate::kundli::model::{NakshatraPlacement, Sign};
 
+#[cfg(test)]
 const NAVAMSAS_PER_SIGN: f64 = 9.0;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +55,7 @@ impl KundliDeriveInput {
         self.bodies.iter().find(|candidate| candidate.body == body)
     }
 
+    #[cfg(test)]
     pub(crate) fn to_navamsa(&self) -> Result<Self, DeriveError> {
         Ok(Self {
             meta: self.meta.clone(),
@@ -92,11 +94,13 @@ fn prepare_body(body: &AstroBodyPosition) -> Result<PreparedBody, DeriveError> {
     })
 }
 
+#[cfg(test)]
 fn navamsa_longitude(longitude: f64) -> Result<f64, DeriveError> {
     let longitude = normalize_longitude(longitude)?;
     normalize_longitude(longitude * NAVAMSAS_PER_SIGN)
 }
 
+#[cfg(test)]
 fn transform_body_to_navamsa(body: &PreparedBody) -> Result<PreparedBody, DeriveError> {
     let longitude = navamsa_longitude(body.longitude)?;
 

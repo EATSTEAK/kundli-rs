@@ -1,61 +1,38 @@
 use crate::kundli::astro::{AstroResult, HouseSystem};
 use crate::kundli::config::KundliConfig;
-use crate::kundli::derive::d1::derive_lagna_from_input;
-use crate::kundli::derive::house::derive_house;
-use crate::kundli::derive::input::KundliDeriveInput;
+use crate::kundli::derive::pipeline::{
+    D9Rule, IdentityProjection, LagnaReference, Pipeline, VargaTransform,
+    WholeSignHouseTransform,
+};
 use crate::kundli::error::DeriveError;
-use crate::kundli::model::{D9Chart, PlanetPlacement};
-
-pub(crate) fn derive_d9_chart_from_input(
-    input: &KundliDeriveInput,
-    config: &KundliConfig,
-) -> Result<D9Chart, DeriveError> {
-    if input.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
-        return Err(DeriveError::UnsupportedZodiac(input.meta.zodiac));
-    }
-
-    if config.house_system != HouseSystem::WholeSign {
-        return Err(DeriveError::UnsupportedD9HouseSystem(config.house_system));
-    }
-
-    let navamsa = input.to_navamsa()?;
-
-    Ok(D9Chart {
-        lagna: derive_lagna_from_input(&navamsa)?,
-        planets: derive_d9_planet_placements_from_input(&navamsa)?,
-    })
-}
+use crate::kundli::model::{ChartResult, D9Chart};
 
 /// Derives a Navamsa (D9) chart from a raw astronomical result.
 ///
 /// This lower-level helper expects sidereal input and currently supports only
 /// [`HouseSystem::WholeSign`].
 pub fn derive_d9_chart(astro: &AstroResult, config: &KundliConfig) -> Result<D9Chart, DeriveError> {
-    let input = KundliDeriveInput::from_astro(astro)?;
-    derive_d9_chart_from_input(&input, config)
+    derive_d9_chart_result(astro, config).map(Into::into)
 }
 
-fn derive_d9_planet_placements_from_input(
-    input: &KundliDeriveInput,
-) -> Result<Vec<PlanetPlacement>, DeriveError> {
-    input
-        .bodies
-        .iter()
-        .map(|body| {
-            Ok(PlanetPlacement {
-                body: body.body,
-                longitude: body.longitude,
-                sign: body.sign,
-                degrees_in_sign: body.degrees_in_sign,
-                house: derive_house(
-                    body.longitude,
-                    input.ascendant.longitude,
-                    &[],
-                    HouseSystem::WholeSign,
-                )?,
-                nakshatra: body.nakshatra,
-                is_retrograde: body.is_retrograde,
-            })
-        })
-        .collect()
+pub(crate) fn derive_d9_chart_result(
+    astro: &AstroResult,
+    config: &KundliConfig,
+) -> Result<ChartResult, DeriveError> {
+    if astro.meta.zodiac != crate::kundli::astro::ZodiacType::Sidereal {
+        return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
+    }
+
+    if config.house_system != HouseSystem::WholeSign {
+        return Err(DeriveError::UnsupportedD9HouseSystem(config.house_system));
+    }
+
+    Pipeline::new(
+        IdentityProjection,
+        LagnaReference,
+        VargaTransform::<D9Rule>::new(),
+        WholeSignHouseTransform,
+    )
+    .execute(astro.clone())
 }
+

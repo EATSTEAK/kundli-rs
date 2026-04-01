@@ -8,11 +8,11 @@ use crate::kundli::astro::{
     AstroEngine, AstroRequest, AstroResult, SwissEphAstroEngine, SwissEphConfig,
 };
 use crate::kundli::config::KundliConfig;
-use crate::kundli::derive::d1::derive_d1_chart;
-use crate::kundli::derive::d9::derive_d9_chart;
+use crate::kundli::derive::d1::derive_d1_chart_result;
+use crate::kundli::derive::d9::derive_d9_chart_result;
 use crate::kundli::derive::dasha::derive_vimshottari_dasha;
 use crate::kundli::error::{InputConfigMismatchField, KundliError};
-use crate::kundli::model::{CalculationMeta, KundliResult};
+use crate::kundli::model::{CalculationMeta, D1Chart, D9Chart, KundliResult};
 
 /// Calculates a complete kundli using the default Swiss Ephemeris-backed
 /// engine.
@@ -58,10 +58,10 @@ pub fn calculate_kundli_with_engine<E: AstroEngine>(
     validate_request_matches_config(request, config)?;
 
     let astro = engine.calculate(request)?;
-    let d1 = derive_d1_chart(&astro, config)?;
-    let d9 = config
+    let d1: D1Chart = derive_d1_chart_result(&astro, config)?.into();
+    let d9: Option<D9Chart> = config
         .include_d9
-        .then(|| derive_d9_chart(&astro, config))
+        .then(|| derive_d9_chart_result(&astro, config).map(Into::into))
         .transpose()?;
     let dasha = config
         .include_dasha
