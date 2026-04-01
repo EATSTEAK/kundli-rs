@@ -216,6 +216,9 @@ impl KundliConfig {
     }
 
     /// Validates and normalizes the requested chart layers.
+    ///
+    /// This method both checks semantic validity and normalizes `charts` by
+    /// sorting and deduplicating the configured [`ChartSpec`] values in place.
     pub fn validate(&mut self) -> Result<(), KundliError> {
         if self.charts.is_empty() {
             return Err(ChartSelectionError::Empty.into());

@@ -19,6 +19,9 @@ use std::collections::BTreeMap;
 
 use crate::kundli::model::{CalculationMeta, ChartLayer, ChartResult, ChartStyle, KundliResult};
 
+/// Calculates a kundli using the default Swiss Ephemeris-backed engine.
+///
+/// This is the recommended high-level entrypoint for most consumers.
 pub fn calculate_kundli(
     request: AstroRequest,
     config: KundliConfig,
@@ -27,6 +30,11 @@ pub fn calculate_kundli(
     calculate_kundli_with_engine(&engine, &request, &config)
 }
 
+/// Calculates a kundli using the provided astronomical engine.
+///
+/// The supplied [`KundliConfig`] is not mutated. Internally, this function
+/// clones it, validates it, and derives charts from that normalized copy after
+/// sorting and deduplicating `config.charts`.
 pub fn calculate_kundli_with_engine<E: AstroEngine>(
     engine: &E,
     request: &AstroRequest,

@@ -123,7 +123,7 @@ pub struct HouseResult {
     pub sign: Sign,
 }
 
-/// Common chart result shape produced by the derive pipeline.
+/// Rendering/interpretation style associated with a derived chart payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChartStyle {
     Standard,
@@ -132,6 +132,7 @@ pub enum ChartStyle {
     DivisionalBhava,
 }
 
+/// Common payload for a single derived chart layer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChartResult {
     pub style: ChartStyle,
@@ -141,7 +142,7 @@ pub struct ChartResult {
     pub reference: Option<ReferenceResult>,
 }
 
-/// The primary natal chart layer derived from the astronomical result.
+/// Convenience low-level result type for callers that derive only the D1 chart.
 #[derive(Debug, Clone, PartialEq)]
 pub struct D1Chart {
     pub lagna: LagnaResult,
@@ -149,7 +150,7 @@ pub struct D1Chart {
     pub houses: Vec<HouseResult>,
 }
 
-/// The Navamsa (D9) chart derived from the primary astronomical result.
+/// Convenience low-level result type for callers that derive only the D9 chart.
 #[derive(Debug, Clone, PartialEq)]
 pub struct D9Chart {
     pub lagna: LagnaResult,
@@ -249,7 +250,7 @@ pub enum ReferenceResult {
     },
 }
 
-/// A chart-layer payload stored in the high-level multi-chart response.
+/// A single payload inside the high-level multi-chart response.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ChartLayer {
     Chart(ChartResult),
@@ -272,6 +273,7 @@ impl ChartLayer {
     }
 }
 
+/// Top-level result returned by the crate's high-level calculation API.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KundliResult {
     pub meta: CalculationMeta,

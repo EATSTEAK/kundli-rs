@@ -1,9 +1,10 @@
-//! High-level public API for kundli calculation.
+//! Public modules for kundli calculation.
 //!
-//! Most consumers should start with
-//! [`calculate::calculate_kundli`].
-//! The submodules are exposed for users who want to work with lower-level
-//! request, engine, derive, error, or result types directly.
+//! Most consumers should prefer the crate-root exports such as
+//! [`crate::calculate_kundli`], [`crate::AstroRequest`], and
+//! [`crate::KundliConfig`].
+//! These modules remain available for lower-level access, but internal pipeline
+//! details are intentionally kept crate-private.
 
 pub mod astro;
 pub mod calculate;
