@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use kundli_rs::kundli::astro::{AstroBody, AstroError, AstroRequest};
+use kundli_rs::kundli::astro::{AstroError, AstroRequest};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -14,7 +14,6 @@ struct CoordinateValidationCase {
     jd_ut: f64,
     latitude: f64,
     longitude: f64,
-    bodies_count: usize,
     expected: String,
 }
 
@@ -32,7 +31,7 @@ fn load_fixture() -> CoordinateValidationFixture {
 }
 
 fn sample_request() -> AstroRequest {
-    AstroRequest::new(2451545.0, 37.5665, 126.978, vec![AstroBody::Sun])
+    AstroRequest::new(2451545.0, 37.5665, 126.978)
 }
 
 #[test]
@@ -44,7 +43,6 @@ fn coordinate_validation_fixture_matches_expected_outcomes() {
         request.jd_ut = case.jd_ut;
         request.latitude = case.latitude;
         request.longitude = case.longitude;
-        request.bodies = vec![AstroBody::Sun; case.bodies_count];
 
         match case.expected.as_str() {
             "ok" => assert!(
@@ -57,11 +55,6 @@ fn coordinate_validation_fixture_matches_expected_outcomes() {
                     request.validate(),
                     Err(AstroError::InvalidCoordinates { .. })
                 ),
-                "fixture case failed: {}",
-                case.name
-            ),
-            "empty_bodies" => assert!(
-                matches!(request.validate(), Err(AstroError::EmptyBodies)),
                 "fixture case failed: {}",
                 case.name
             ),

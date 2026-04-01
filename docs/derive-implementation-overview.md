@@ -123,13 +123,15 @@ pub(crate) mod sign;
 
 ```rust
 pub struct AstroResult {
-    pub bodies: Vec<AstroBodyPosition>,
+    pub bodies: [AstroBodyPosition; AstroBody::ALL.len()],
     pub ascendant_longitude: f64,
     pub mc_longitude: f64,
-    pub house_cusps: Vec<f64>,
+    pub house_cusps: [f64; 12],
     pub meta: AstroMeta,
 }
 ```
+
+`AstroResult`는 더 이상 request-shaped partial result가 아니라 derive가 바로 소비하는 canonical full snapshot이다. `bodies`는 항상 `AstroBody::ALL` 순서를 따르고, `house_cusps`도 항상 12개를 보장한다.
 
 derive가 실제로 사용하는 필드는 다음과 같다.
 
@@ -148,15 +150,18 @@ derive가 실제로 사용하는 필드는 다음과 같다.
 현재 `KundliConfig`는 여전히 duplicated astro settings를 보존하지만, 권장 조립 경로는 struct literal보다 생성 메서드다.
 
 ```rust
-let request = AstroRequest::new(jd_ut, latitude, longitude, bodies)
+let request = AstroRequest::new(jd_ut, latitude, longitude)
     .with_zodiac(zodiac)
     .with_ayanamsha(ayanamsha)
     .with_house_system(house_system)
     .with_node_type(node_type);
 
 let config = KundliConfig::from_request(&request)
-    .with_include_d9(true)
-    .with_include_dasha(true);
+    .with_charts(&[
+    KnownChart::D1,
+    KnownChart::D9,
+    KnownChart::VimshottariDasha,
+]);
 ```
 
 이 패턴의 핵심 의도는 request/config에 중복된 zodiac-related 설정이 처음부터 일치하도록 만드는 것이다.
@@ -166,7 +171,7 @@ let config = KundliConfig::from_request(&request)
 - D1: `house_system`에 따라 WholeSign / cusp 기반 분기
 - D9: `house_system == WholeSign`인지 검증
 
-`include_d9`, `include_dasha`는 현재 derive 함수 내부에서는 소비되지 않는다. 이 값들은 상위 orchestration에서 의미를 가진다.
+`charts` selection은 현재 derive 함수 내부에서는 소비되지 않는다. 이 값은 상위 orchestration에서 어떤 chart layer를 `KundliResult.charts` 컬렉션에 조립할지 결정할 때 의미를 가진다.
 
 ### 4.3 결과 모델
 
@@ -177,8 +182,9 @@ let config = KundliConfig::from_request(&request)
 - `PlanetPlacement`
   - body / longitude / sign / degrees_in_sign / house / nakshatra / is_retrograde
 - `HouseResult`
-  - `cusp_longitude`는 house의 시작 longitude를 뜻한다.
-  - cusp 기반 system에서는 실제 cusp를, WholeSign에서는 sign boundary를 나타낸다.
+  - house 번호는 pipeline reference 기준으로 부여된다.
+  - `cusp_longitude`는 materialize된 house의 시작 longitude를 뜻한다.
+  - cusp 기반 system에서는 절대 cusp를 reference-relative로 재번호화한 결과를, WholeSign에서는 reference가 속한 sign boundary 기준 house 시작점을 나타낸다.
 - `VimshottariDasha`
   - `moon_nakshatra`
   - `current_mahadasha`

@@ -6,8 +6,7 @@
   "ayanamsha": "Lahiri",
   "house_system": "WholeSign",
   "node_type": "True",
-  "bodies": ["Sun", "Moon", "Rahu", "Ketu"],
-  "expected_body_count": 4,
+  "expected_body_count": 9,
   "expected_house_cusp_count": 12,
   "expect_ayanamsha_value": true
 }

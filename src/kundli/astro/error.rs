@@ -7,8 +7,6 @@ pub enum AstroError {
     InvalidJulianDay(f64),
     /// The provided latitude or longitude is out of range or not finite.
     InvalidCoordinates { latitude: f64, longitude: f64 },
-    /// No bodies were requested.
-    EmptyBodies,
     /// The configured ephemeris path cannot be passed to the backend.
     InvalidEphemerisPath,
     /// The underlying astronomical backend reported a calculation failure.
@@ -28,7 +26,6 @@ impl fmt::Display for AstroError {
                     "invalid coordinates: latitude={latitude}, longitude={longitude}"
                 )
             }
-            Self::EmptyBodies => write!(f, "at least one astro body is required"),
             Self::InvalidEphemerisPath => {
                 write!(f, "ephemeris path must not contain interior NUL bytes")
             }

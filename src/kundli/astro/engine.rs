@@ -49,27 +49,27 @@ impl AstroEngine for SwissEphAstroEngine {
         request.validate()?;
 
         let raw = Ephemeris::calculate(request, &self.config)?;
-        let bodies = request
-            .bodies
-            .iter()
-            .copied()
-            .zip(raw.bodies)
-            .map(|(body, position)| AstroBodyPosition {
+        let bodies = std::array::from_fn(|index| {
+            let body = crate::kundli::astro::AstroBody::ALL[index];
+            let position = raw.bodies[index];
+            AstroBodyPosition {
                 body,
                 longitude: position.longitude,
                 latitude: position.latitude,
                 distance: position.distance,
                 speed_longitude: position.longitude_speed,
-            })
-            .collect();
+            }
+        });
 
         Ok(AstroResult {
             bodies,
             ascendant_longitude: raw.houses.ascendant,
             mc_longitude: raw.houses.mc,
-            house_cusps: raw.houses.cusps.to_vec(),
+            house_cusps: raw.houses.cusps,
             meta: AstroMeta {
                 jd_ut: request.jd_ut,
+                latitude: request.latitude,
+                longitude: request.longitude,
                 zodiac: request.zodiac,
                 ayanamsha: request.ayanamsha,
                 ayanamsha_value: raw.ayanamsha_value,
@@ -82,29 +82,20 @@ impl AstroEngine for SwissEphAstroEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kundli::astro::AstroBody;
-
     fn sample_request() -> AstroRequest {
-        AstroRequest::new(
-            2451545.0,
-            37.5665,
-            126.978,
-            vec![
-                AstroBody::Sun,
-                AstroBody::Moon,
-                AstroBody::Rahu,
-                AstroBody::Ketu,
-            ],
-        )
+        AstroRequest::new(2451545.0, 37.5665, 126.978)
     }
 
     #[test]
-    fn calculate_returns_requested_bodies_and_houses() {
+    fn calculate_returns_full_body_set_and_house_shape() {
         let engine = SwissEphAstroEngine::default();
         let request = sample_request();
         let result = engine.calculate(&request).unwrap();
 
-        assert_eq!(result.bodies.len(), 4);
+        assert_eq!(
+            result.bodies.len(),
+            crate::kundli::astro::AstroBody::ALL.len()
+        );
         assert_eq!(result.house_cusps.len(), 12);
         assert!(result.ascendant_longitude >= 0.0);
         assert!(result.mc_longitude >= 0.0);
@@ -118,6 +109,9 @@ mod tests {
 
         let result = engine.calculate(&sample_request()).unwrap();
 
-        assert_eq!(result.bodies.len(), 4);
+        assert_eq!(
+            result.bodies.len(),
+            crate::kundli::astro::AstroBody::ALL.len()
+        );
     }
 }

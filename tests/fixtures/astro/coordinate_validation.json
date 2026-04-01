@@ -5,7 +5,6 @@
       "jd_ut": 2451545.0,
       "latitude": 37.5665,
       "longitude": 126.978,
-      "bodies_count": 2,
       "expected": "ok"
     },
     {
@@ -13,7 +12,6 @@
       "jd_ut": 2451545.0,
       "latitude": -90.0,
       "longitude": -180.0,
-      "bodies_count": 1,
       "expected": "ok"
     },
     {
@@ -21,7 +19,6 @@
       "jd_ut": 2451545.0,
       "latitude": 90.0,
       "longitude": 180.0,
-      "bodies_count": 1,
       "expected": "ok"
     },
     {
@@ -29,7 +26,6 @@
       "jd_ut": 2451545.0,
       "latitude": -90.1,
       "longitude": 0.0,
-      "bodies_count": 1,
       "expected": "invalid_coordinates"
     },
     {
@@ -37,7 +33,6 @@
       "jd_ut": 2451545.0,
       "latitude": 90.1,
       "longitude": 0.0,
-      "bodies_count": 1,
       "expected": "invalid_coordinates"
     },
     {
@@ -45,7 +40,6 @@
       "jd_ut": 2451545.0,
       "latitude": 0.0,
       "longitude": -180.1,
-      "bodies_count": 1,
       "expected": "invalid_coordinates"
     },
     {
@@ -53,16 +47,7 @@
       "jd_ut": 2451545.0,
       "latitude": 0.0,
       "longitude": 180.1,
-      "bodies_count": 1,
       "expected": "invalid_coordinates"
-    },
-    {
-      "name": "empty_bodies",
-      "jd_ut": 2451545.0,
-      "latitude": 37.5665,
-      "longitude": 126.978,
-      "bodies_count": 0,
-      "expected": "empty_bodies"
     }
   ]
 }

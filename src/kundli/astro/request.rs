@@ -21,7 +21,7 @@ pub enum Ayanamsha {
 }
 
 /// House system used for house derivation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum HouseSystem {
     /// Placidus house system.
     Placidus,
@@ -42,8 +42,8 @@ pub enum NodeType {
     True,
 }
 
-/// Astronomical bodies that can be requested from an [`AstroEngine`](crate::kundli::astro::AstroEngine).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Astronomical bodies included in a derivation-ready [`AstroResult`](crate::kundli::astro::AstroResult).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum AstroBody {
     Sun,
     Moon,
@@ -54,6 +54,34 @@ pub enum AstroBody {
     Saturn,
     Rahu,
     Ketu,
+}
+
+impl AstroBody {
+    pub const ALL: [Self; 9] = [
+        Self::Sun,
+        Self::Moon,
+        Self::Mars,
+        Self::Mercury,
+        Self::Jupiter,
+        Self::Venus,
+        Self::Saturn,
+        Self::Rahu,
+        Self::Ketu,
+    ];
+
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Sun => 0,
+            Self::Moon => 1,
+            Self::Mars => 2,
+            Self::Mercury => 3,
+            Self::Jupiter => 4,
+            Self::Venus => 5,
+            Self::Saturn => 6,
+            Self::Rahu => 7,
+            Self::Ketu => 8,
+        }
+    }
 }
 
 /// Input required to calculate raw astronomical positions.
@@ -76,8 +104,6 @@ pub struct AstroRequest {
     pub house_system: HouseSystem,
     /// Node mode used for Rahu and Ketu positions.
     pub node_type: NodeType,
-    /// Ordered list of bodies to calculate.
-    pub bodies: Vec<AstroBody>,
 }
 
 impl AstroRequest {
@@ -89,7 +115,7 @@ impl AstroRequest {
     /// - [`Ayanamsha::Lahiri`]
     /// - [`HouseSystem::WholeSign`]
     /// - [`NodeType::True`]
-    pub fn new(jd_ut: f64, latitude: f64, longitude: f64, bodies: Vec<AstroBody>) -> Self {
+    pub fn new(jd_ut: f64, latitude: f64, longitude: f64) -> Self {
         Self {
             jd_ut,
             latitude,
@@ -98,7 +124,6 @@ impl AstroRequest {
             ayanamsha: Ayanamsha::Lahiri,
             house_system: HouseSystem::WholeSign,
             node_type: NodeType::True,
-            bodies,
         }
     }
 
@@ -131,8 +156,7 @@ impl AstroRequest {
     /// This method checks only local input validity:
     ///
     /// - `jd_ut` must be finite,
-    /// - coordinates must be finite and within supported ranges,
-    /// - `bodies` must not be empty.
+    /// - coordinates must be finite and within supported ranges.
     ///
     /// It does not verify whether duplicated settings match a separate
     /// [`crate::kundli::config::KundliConfig`].
@@ -154,10 +178,6 @@ impl AstroRequest {
             });
         }
 
-        if self.bodies.is_empty() {
-            return Err(AstroError::EmptyBodies);
-        }
-
         Ok(())
     }
 }
@@ -167,7 +187,7 @@ mod tests {
     use super::*;
 
     fn sample_request() -> AstroRequest {
-        AstroRequest::new(2451545.0, 37.5665, 126.978, vec![AstroBody::Sun, AstroBody::Moon])
+        AstroRequest::new(2451545.0, 37.5665, 126.978)
     }
 
     #[test]
@@ -184,13 +204,5 @@ mod tests {
             request.validate(),
             Err(AstroError::InvalidCoordinates { .. })
         ));
-    }
-
-    #[test]
-    fn validate_rejects_empty_bodies() {
-        let mut request = sample_request();
-        request.bodies.clear();
-
-        assert!(matches!(request.validate(), Err(AstroError::EmptyBodies)));
     }
 }
