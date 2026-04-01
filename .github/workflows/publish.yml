@@ -1,0 +1,50 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run library tests
+        run: cargo test --lib
+
+      - name: Run doctests
+        run: cargo test --doc
+
+      - name: Run full test suite
+        run: cargo test
+
+      - name: Verify crate package contents
+        run: cargo package --list
+
+      - name: Verify publish with dry run
+        run: cargo publish --dry-run
+
+      - name: Publish crate
+        run: cargo publish

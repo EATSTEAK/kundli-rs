@@ -5,6 +5,10 @@ edition = "2024"
 description = "A Rust library for calculating astrological kundli charts using the Swiss Ephemeris."
 authors = ["Hyomin Koo <me@eatsteak.dev>"]
 license = "AGPL-3.0"
+repository = "https://github.com/EATSTEAK/kundli-rs"
+documentation = "https://docs.rs/kundli-rs"
+keywords = ["kundli", "astrology", "vedic", "swiss-eph"]
+exclude = ["plans/*"]
 
 
 [dependencies]
