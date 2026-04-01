@@ -1,105 +1,77 @@
 # Context
-사용자는 현재 `kundli-rs`가 지원하는 제한된 차트 집합(D1, D9, VimshottariDasha)에서 확장해, 표에 있는 기본 차트 / divisional charts / reference-based charts / bhava·chalit 계열을 모두 구현할 수 있는 계획을 원한다. 핵심 목표는 단순히 enum variant를 늘리는 것이 아니라, D2~D60, Moon/Sun/Jupiter/GL 기준 전환, divisional bhava/chalit까지 수용할 수 있는 구조로 API와 derive pipeline을 일반화하는 것이다. 사용자 확인 결과, 외부 API 모델은 개별 차트 enum 나열보다 `ChartSpec { kind, reference, house_mode }` 같은 spec 조합형이 우선이다.
+초기 spec-driven 구조 변경은 이미 반영되었고, 이제 남은 범위는 3가지다: (1) `Jupiter Bhava`와 `GL Bhava` 같은 reference 확장, (2) D2~D60을 단순 `longitude * division`이 아니라 각 분할 차트의 전통 규칙으로 개별화, (3) 현재 동일하게 materialize되는 `Bhava`와 `Chalit`를 의미적으로 분리하는 것. 현재 코드상 `Jupiter` 기준점은 `ReferenceKey::Planet(AstroBody)`로 바로 수용 가능하지만, `GL`은 별도 special point가 없고, `Bhava/Chalit`는 `src/kundli/calculate.rs`에서 사실상 같은 파이프라인을 공유하며, divisional charts도 `src/kundli/derive/pipeline/sign.rs::DivisionalSignTransform`의 단순 remap에 머물러 있다.
 
 # Recommended approach
-1. **차트 taxonomy를 spec 중심으로 재설계한다.**
+1. **Reference 확장을 두 층으로 나눈다.**
    - `src/kundli/config.rs`
-   - 현재 `KnownChart`는 `D1`, `D9`, `VimshottariDasha`만 표현 가능하므로 확장성이 부족하다.
-   - `ChartSpec` 계층으로 전환한다.
-     - 예시 축:
-       - `ChartKind`: `Rasi`, `Varga { division }`, `Bhava`, `Chalit`, `DivisionalBhava { division }`, `Dasha`
-       - `ReferenceKey`: `Lagna`, `Moon`, `Sun`, `Planet(AstroBody)`, `Special(...)`
-       - `HouseMode`: `WholeSign`, `CuspBased(HouseSystem)`, `None`
-   - `Moon Chart`, `Sun Chart`, `Moon Bhava`, `D9 Bhava` 같은 차트는 새 top-level enum을 계속 추가하지 않고 spec 조합으로 표현한다.
-
-2. **결과 타입을 공통 chart payload 중심으로 정리한다.**
+   - `src/kundli/derive/pipeline/reference.rs`
    - `src/kundli/model.rs`
-   - 현재 `ChartLayer::D1(D1Chart)`, `ChartLayer::D9(D9Chart)` 구조는 chart 종류가 늘수록 폭증한다.
-   - 공통 `ChartResult`를 중심 payload로 승격하고, 다샤만 별도 payload로 유지하는 방향으로 정리한다.
-   - `KundliResult.charts`의 key도 `KnownChart`에서 새 spec/identifier 타입으로 교체한다.
+   - `Jupiter Bhava`는 새 public alias/helper만 추가해 바로 지원한다.
+   - `GL`은 `ReferenceKey`에 `Special(...)` 축을 추가하고, derive 계층에서 longitude를 계산해 `ResolvedReference`로 주입한다.
+   - special point가 외부 응답에도 보여야 한다면 `ChartResult`/metadata에 별도 필드를 추가하고, 기준점으로만 쓰면 내부 derive 값으로만 유지한다.
 
-3. **calculate entrypoint를 spec-dispatch 구조로 바꾼다.**
-   - `src/kundli/calculate.rs`
-   - 현재 `calculate_kundli_with_engine`는 `match KnownChart`로 고정 분기한다.
-   - 이를 `ChartSpec -> pipeline builder -> materialize` 흐름으로 바꾸고, 다샤만 별도 분기로 남긴다.
-   - 이 단계가 전체 구조 변경의 핵심이며, 현재 구조는 요청된 전체 차트 구현에 충분하지 않다.
+2. **GL 계산은 astro가 아니라 derive helper에 둔다.**
+   - `src/kundli/derive/reference_points.rs` 같은 전용 모듈을 추가하는 방향
+   - 현재 `AstroResult`는 canonical body + ascendant/mc/house cusps만 가지므로, GL을 raw astro snapshot에 넣기보다 reference resolution 시 계산하는 편이 blast radius가 작다.
+   - 이 helper는 `AstroResult`, `HouseSystem`, 필요 시 weekday/day-night 판정에 필요한 값만 받아 longitude를 계산한다.
 
-4. **기존 derive pipeline을 재사용 가능한 팩토리 형태로 일반화한다.**
-   - `src/kundli/derive/pipeline/core.rs`
-   - `src/kundli/derive/pipeline/reference.rs`
+3. **Varga rule을 data-driven table/strategy로 치환한다.**
    - `src/kundli/derive/pipeline/sign.rs`
-   - 이미 있는 `ChartPipeline`, `IdentitySignTransform`, `VargaTransform<R>`, `WholeSignHouseTransform`, `CuspBasedHouseTransform`는 그대로 재사용한다.
-   - 새 작업은 “차트별 전용 derive 함수 추가”보다 “spec에 따라 reference/sign/house 연산을 조합하는 builder”를 만드는 쪽으로 잡는다.
+   - 현재 `map_divisional_longitude(longitude, division)`는 모든 Dn에 동일 규칙을 적용한다.
+   - 이를 `VargaScheme` 또는 `DivisionRule` 테이블로 바꿔 D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60 각각의 sign mapping 규칙을 분리한다.
+   - `DivisionalSignTransform`는 `division`만 받지 말고 “resolved rule”을 받아 동작하게 바꾼다.
+   - D9 전용 `D9Rule`는 새 rule table의 한 케이스로 흡수한다.
 
-5. **reference layer를 일반화한다.**
-   - `src/kundli/derive/pipeline/reference.rs`
-   - 현재 `LagnaReference`, `MoonReference`, `ReferencePoint::Planet(AstroBody)`가 이미 존재하므로 이를 기반으로 `Sun`, `Jupiter`, `GL` 등으로 확장한다.
-   - 우선순위:
-     - `Moon Chart`, `Sun Chart`
-     - `Moon Bhava`, `Jupiter Bhava`, `GL Bhava` 같은 reference-based bhava/chalit
-   - `GL` 같은 special point가 아직 astro/model에 없으면 별도 계산 경로가 필요한지 먼저 확인해야 한다.
+4. **Bhava와 Chalit를 결과 shape에서 분리한다.**
+   - `src/kundli/model.rs`
+   - `src/kundli/derive/pipeline/materialize.rs`
+   - 현재 둘 다 `ChartLayer::Chart(ChartResult)`로 동일하게 materialize되어 `tests/astro_smoke.rs`에서도 같은 결과로 검증된다.
+   - 권장 방향은 `ChartResult` 공통 기반은 유지하되, `Chalit`에만 “sign placement는 유지, house occupancy는 cusp-based로 재해석했다”는 의미가 드러나도록 별도 payload 또는 명시 필드를 둔다.
+   - `Bhava`는 cusp-based houses 자체가 중심인 차트, `Chalit`는 sign anchoring과 house occupancy를 분리해 설명 가능한 차트로 정의한다.
 
-6. **varga support를 D9 전용에서 범용 division rule 집합으로 확장한다.**
-   - `src/kundli/derive/pipeline/sign.rs`
-   - 현재 `D9Rule`만 있으므로 `VargaRule` 구현을 D2, D3, D4, D7, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60까지 확장한다.
-   - 구현 순서는 사용자가 표에 제시한 순서를 따르되, 내부적으로는 rule table/strategy를 먼저 정리한 뒤 차트를 추가하는 방식이 낫다.
-   - `D1`은 `Rasi + Lagna + IdentityTransform`, `D9`는 `Varga(9)`의 특수 케이스로 흡수한다.
-
-7. **bhava/chalit 계열을 chart kind로 분리하되, house transform 조합으로 구현한다.**
-   - `src/kundli/derive/d1.rs`
-   - `src/kundli/derive/pipeline/house.rs`
-   - 현재 D1에서 이미 `WholeSignHouseTransform | CuspBasedHouseTransform` 분기가 있으므로 이를 재사용한다.
-   - 계획상 의미 구분:
-     - `Bhava Chart`: 하우스 재산정 결과를 독립 chart로 노출
-     - `Bhava Chalit`: sign 배치와 house 점유 표현 방식을 분리해 결과 shape를 명확히 정의
-     - `Divisional Bhava`: varga transform 이후 house transform을 다시 적용
-
-8. **구현 순서를 고정한다.**
-   - 1단계: config/model/calculate의 spec 기반 구조 변경
-   - 2단계: reference 일반화(Moon/Sun/Planet/Special)
-   - 3단계: 범용 varga rule 도입(D2~D60)
-   - 4단계: bhava/chalit/divisional bhava 조합 지원
-   - 5단계: alias/프리셋 정리(예: Moon Chart = `Rasi + Moon ref`)
+5. **구현 순서를 고정한다.**
+   - 1단계: `Jupiter Bhava` alias/helper 추가
+   - 2단계: `ReferenceKey::Special(...)` 및 GL 계산 helper 도입
+   - 3단계: divisional rule table로 D2~D60 개별화
+   - 4단계: `Bhava`/`Chalit` payload 분리 및 materialize 업데이트
+   - 5단계: smoke/integration fixtures 확장
 
 # Critical files to modify
 - `src/kundli/config.rs`
-- `src/kundli/model.rs`
+- `src/kundli/error.rs`
 - `src/kundli/calculate.rs`
+- `src/kundli/model.rs`
 - `src/kundli/derive/pipeline/reference.rs`
 - `src/kundli/derive/pipeline/sign.rs`
+- `src/kundli/derive/pipeline/materialize.rs`
 - `src/kundli/derive/pipeline/house.rs`
-- `src/kundli/derive/d1.rs`
-- `src/kundli/derive/d9.rs`
-- 필요 시 `src/kundli/astro/*` 또는 special-point 계산 위치
-- 테스트 파일:
-  - `tests/derive_d1.rs`
-  - `tests/derive_d9.rs`
+- 새 special-point helper 모듈 (`src/kundli/derive/*`)
+- 테스트:
   - `tests/astro_smoke.rs`
-  - 새 fixture/golden test 파일들
+  - `tests/derive_d9.rs`
+  - 새 varga rule table tests
+  - 새 reference/special-point tests
 
 # Existing code to reuse
+- `src/kundli/calculate.rs::derive_chart_result`
 - `src/kundli/derive/pipeline/core.rs::ChartPipeline`
-- `src/kundli/derive/pipeline/reference.rs::{ReferencePoint, LagnaReference, MoonReference}`
-- `src/kundli/derive/pipeline/sign.rs::{IdentitySignTransform, VargaTransform, VargaRule, D9Rule}`
+- `src/kundli/derive/pipeline/reference.rs::ReferenceTransform`
+- `src/kundli/derive/pipeline/sign.rs::build_sign_placement`
 - `src/kundli/derive/pipeline/house.rs::{WholeSignHouseTransform, CuspBasedHouseTransform}`
-- `src/kundli/model.rs::ChartResult`
+- `src/kundli/derive/pipeline/materialize.rs::Materialize`
 
 # Verification
 1. 단위 테스트
-   - 각 `VargaRule`의 longitude mapping 검증
-   - reference 변경 시 lagna/house renumbering 검증
-   - bhava/chalit/divisional bhava 조합별 invariant 검증
+   - `Jupiter`/`Moon`/`Sun`/`GL` 기준점이 기대 longitude로 해석되는지 검증
+   - D2~D60 rule table에서 대표 longitude boundary 케이스 검증
+   - `Bhava`와 `Chalit`가 더 이상 동일 payload semantics로 수렴하지 않는지 검증
 
 2. 통합 테스트
-   - `src/kundli/calculate.rs` 경유로 `ChartSpec` 조합 요청이 올바른 payload를 반환하는지 확인
-   - 중복 spec 정규화/정렬/validation 확인
+   - `calculate_kundli_with_engine` 경유로 `Jupiter Bhava`, `GL Bhava`, `D10`, `D24`, `D60`, `Divisional Bhava` 요청 검증
+   - config validation에서 `Bhava/Chalit/DivisionalBhava`는 명시적 `CuspBased` mode를 요구하는지 검증
 
-3. fixture 기반 검증
-   - 현재 `tests/fixtures/astro/smoke_case.json` 패턴을 확장해 D10, D24, D60, Moon Chart, Sun Chart, Bhava, Chalit, Moon Bhava 같은 대표 케이스 추가
+3. 회귀 테스트
+   - 기존 `D1`, `D9`, `VimshottariDasha` 및 현재 reference/bhava 관련 테스트 유지
 
-4. 회귀 테스트
-   - 기존 D1/D9/VimshottariDasha 테스트가 그대로 통과해야 함
-   - D9의 기존 제약(예: whole-sign only)을 유지할지, 범용 spec 구조에서 재정의할지 명시적으로 검증
-
-# Conclusion
-현재 구조는 요청된 전체 차트 집합을 무리 없이 수용하기에 충분하지 않다. 특히 `KnownChart`/`ChartLayer`/`calculate_kundli_with_engine`의 고정 분기 구조는 반드시 바뀌어야 한다. 다만 derive pipeline의 핵심 부품(`ChartPipeline`, reference/sign/house transform)은 재사용 가치가 높아서, 전면 폐기보다 spec-driven 조합 구조로 감싸는 방향이 가장 적합하다.
+# GL decision
+`GL Bhava`의 `GL`은 `Gulika`로 구현한다. 따라서 special reference 축은 최소 `Gulika`를 포함해야 하며, `ReferenceTransform` 또는 별도 special-point helper에서 Gulika longitude를 계산해 `ResolvedReference`로 변환한다.
