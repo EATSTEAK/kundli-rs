@@ -3,10 +3,10 @@ use crate::kundli::astro::{AstroBody, Ayanamsha, ZodiacType};
 const BODY_COUNT: usize = AstroBody::ALL.len();
 const HOUSE_CUSP_COUNT: usize = 12;
 
-/// A single astronomical body position returned by an [`AstroEngine`](crate::kundli::astro::AstroEngine).
+/// A single canonical astronomical body position returned by an [`AstroEngine`](crate::kundli::astro::AstroEngine).
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroBodyPosition {
-    /// Body identifier matching the request order.
+    /// Body identifier matching the canonical [`AstroBody::ALL`] order.
     pub body: AstroBody,
     /// Ecliptic longitude in degrees.
     pub longitude: f64,
@@ -33,7 +33,7 @@ pub struct AstroMeta {
     pub sidereal_time: f64,
 }
 
-/// Raw astronomical output used as input to kundli derivation.
+/// Derivation-ready astronomical snapshot used as input to kundli derivation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroResult {
     /// Canonical body positions for Sun..Ketu, always in [`AstroBody::ALL`] order.

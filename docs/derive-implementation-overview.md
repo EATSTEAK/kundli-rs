@@ -123,13 +123,15 @@ pub(crate) mod sign;
 
 ```rust
 pub struct AstroResult {
-    pub bodies: Vec<AstroBodyPosition>,
+    pub bodies: [AstroBodyPosition; AstroBody::ALL.len()],
     pub ascendant_longitude: f64,
     pub mc_longitude: f64,
-    pub house_cusps: Vec<f64>,
+    pub house_cusps: [f64; 12],
     pub meta: AstroMeta,
 }
 ```
+
+`AstroResult`는 더 이상 request-shaped partial result가 아니라 derive가 바로 소비하는 canonical full snapshot이다. `bodies`는 항상 `AstroBody::ALL` 순서를 따르고, `house_cusps`도 항상 12개를 보장한다.
 
 derive가 실제로 사용하는 필드는 다음과 같다.
 
@@ -148,7 +150,7 @@ derive가 실제로 사용하는 필드는 다음과 같다.
 현재 `KundliConfig`는 여전히 duplicated astro settings를 보존하지만, 권장 조립 경로는 struct literal보다 생성 메서드다.
 
 ```rust
-let request = AstroRequest::new(jd_ut, latitude, longitude, bodies)
+let request = AstroRequest::new(jd_ut, latitude, longitude)
     .with_zodiac(zodiac)
     .with_ayanamsha(ayanamsha)
     .with_house_system(house_system)
@@ -177,8 +179,9 @@ let config = KundliConfig::from_request(&request)
 - `PlanetPlacement`
   - body / longitude / sign / degrees_in_sign / house / nakshatra / is_retrograde
 - `HouseResult`
-  - `cusp_longitude`는 house의 시작 longitude를 뜻한다.
-  - cusp 기반 system에서는 실제 cusp를, WholeSign에서는 sign boundary를 나타낸다.
+  - house 번호는 pipeline reference 기준으로 부여된다.
+  - `cusp_longitude`는 materialize된 house의 시작 longitude를 뜻한다.
+  - cusp 기반 system에서는 절대 cusp를 reference-relative로 재번호화한 결과를, WholeSign에서는 reference가 속한 sign boundary 기준 house 시작점을 나타낸다.
 - `VimshottariDasha`
   - `moon_nakshatra`
   - `current_mahadasha`

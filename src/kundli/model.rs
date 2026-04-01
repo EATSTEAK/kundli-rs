@@ -121,7 +121,7 @@ pub struct LagnaResult {
     pub longitude: f64,
 }
 
-/// Derived placement for a requested body.
+/// Derived placement for a canonical astronomical body.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlanetPlacement {
     /// The astronomical body.
@@ -142,9 +142,11 @@ pub struct PlanetPlacement {
 
 /// Derived house metadata.
 ///
-/// `cusp_longitude` represents the start longitude of the house.
-/// For cusp-based systems this is the reported cusp longitude, and for
-/// WholeSign houses this is the sign boundary that anchors the house.
+/// House numbers are assigned relative to the pipeline reference point.
+/// `cusp_longitude` represents the start longitude of the materialized house.
+/// For cusp-based systems this is the reported cusp after reference-relative
+/// renumbering, and for WholeSign houses this is the sign boundary that anchors
+/// the reference-relative house.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HouseResult {
     /// One-based house number.
@@ -160,7 +162,7 @@ pub struct HouseResult {
 pub struct ChartResult {
     /// Derived lagna.
     pub lagna: LagnaResult,
-    /// Derived placements for requested bodies.
+    /// Derived placements for canonical astronomical bodies.
     pub planets: Vec<PlanetPlacement>,
     /// Derived houses according to the configured house system.
     pub houses: Vec<HouseResult>,
@@ -171,7 +173,7 @@ pub struct ChartResult {
 pub struct D1Chart {
     /// Derived lagna.
     pub lagna: LagnaResult,
-    /// Derived placements for requested bodies.
+    /// Derived placements for canonical astronomical bodies.
     pub planets: Vec<PlanetPlacement>,
     /// Derived houses according to the configured house system.
     pub houses: Vec<HouseResult>,
