@@ -45,6 +45,6 @@ where
         let referenced = self.reference.apply(&projected)?;
         let signed = self.sign_transform.apply(&referenced)?;
         let housed = self.house_transform.apply(&signed)?;
-        Ok(housed.materialize())
+        housed.materialize()
     }
 }

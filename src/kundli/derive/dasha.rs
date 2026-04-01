@@ -50,7 +50,7 @@ fn materialize_vimshottari_dasha(seed: MoonDashaSeed) -> Result<VimshottariDasha
     let sequence_start = DashaLord::SEQUENCE
         .iter()
         .position(|&lord| lord == current_lord)
-        .expect("current dasha lord must be part of the Vimshottari sequence");
+        .ok_or(DeriveError::InvalidDashaSequenceLord(current_lord))?;
 
     let mut next_start_jd_ut = current_start_jd_ut;
     let mut mahadashas = Vec::with_capacity(DashaLord::SEQUENCE.len());

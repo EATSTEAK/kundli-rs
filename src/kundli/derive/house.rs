@@ -43,8 +43,8 @@ fn derive_house_whole_sign(
     planet_longitude: f64,
     ascendant_longitude: f64,
 ) -> Result<HouseNumber, DeriveError> {
-    let planet_sign = longitude_to_sign_index(planet_longitude);
-    let ascendant_sign = longitude_to_sign_index(ascendant_longitude);
+    let planet_sign = longitude_to_sign_index(planet_longitude)?;
+    let ascendant_sign = longitude_to_sign_index(ascendant_longitude)?;
 
     // House number = (planet_sign - ascendant_sign + 12) % 12 + 1
     let house_number =
@@ -52,8 +52,8 @@ fn derive_house_whole_sign(
 
     // Safety: house_number is always in range 1-12 due to modulo
     debug_assert!((1..=12).contains(&house_number));
-    Ok(HouseNumber::new(house_number as u8)
-        .expect("whole-sign derived house must stay within 1..=12"))
+    HouseNumber::new(house_number as u8)
+        .ok_or(DeriveError::InvalidHouseNumber(house_number as u8))
 }
 
 /// Derives house placement using house cusps.
@@ -86,8 +86,8 @@ fn derive_house_from_cusps(
         let cusp_end = normalize_longitude(house_cusps[(i + 1) % NUM_HOUSES])?;
 
         if is_in_house(planet_lon, cusp_start, cusp_end) {
-            return Ok(HouseNumber::new((i + 1) as u8)
-                .expect("cusp-derived house must stay within 1..=12"));
+            return HouseNumber::new((i + 1) as u8)
+                .ok_or(DeriveError::InvalidHouseNumber((i + 1) as u8));
         }
     }
 
@@ -95,10 +95,9 @@ fn derive_house_from_cusps(
 }
 
 /// Converts a longitude to a sign index (0-11).
-fn longitude_to_sign_index(longitude: f64) -> usize {
-    let normalized = normalize_longitude(longitude)
-        .expect("longitude_to_sign_index is only used after finite longitude validation");
-    (normalized / DEGREES_PER_SIGN).floor() as usize % NUM_HOUSES
+fn longitude_to_sign_index(longitude: f64) -> Result<usize, DeriveError> {
+    let normalized = normalize_longitude(longitude)?;
+    Ok((normalized / DEGREES_PER_SIGN).floor() as usize % NUM_HOUSES)
 }
 
 /// Checks if a longitude falls within a house, handling wrap-around.
@@ -121,7 +120,7 @@ const _: () = {
     let _ = derive_house as fn(f64, f64, &[f64], HouseSystem) -> Result<HouseNumber, DeriveError>;
     let _ = derive_house_whole_sign as fn(f64, f64) -> Result<HouseNumber, DeriveError>;
     let _ = derive_house_from_cusps as fn(f64, &[f64]) -> Result<HouseNumber, DeriveError>;
-    let _ = longitude_to_sign_index as fn(f64) -> usize;
+    let _ = longitude_to_sign_index as fn(f64) -> Result<usize, DeriveError>;
     let _ = is_in_house as fn(f64, f64, f64) -> bool;
 };
 

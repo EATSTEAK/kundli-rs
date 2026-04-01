@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::kundli::astro::{AstroError, HouseSystem, ZodiacType};
+use crate::kundli::model::DashaLord;
 
 /// Invalid high-level chart selection declared in [`crate::kundli::config::KundliConfig`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,12 +26,18 @@ impl std::error::Error for ChartSelectionError {}
 pub enum DeriveError {
     /// Vimshottari dasha derivation requires a Moon position.
     MissingMoon,
+    /// A pipeline placement unexpectedly did not contain a body.
+    MissingPlacementBody,
     /// A cusp-based house derivation expected exactly 12 cusps.
     InvalidHouseCusps(usize),
+    /// A derived house number fell outside the supported `1..=12` range.
+    InvalidHouseNumber(u8),
     /// A longitude could not be interpreted as a finite degree value.
     InvalidLongitude(f64),
     /// A pada value fell outside the supported `1..=4` range.
     InvalidPada(u8),
+    /// A dasha lord could not be found in the Vimshottari sequence.
+    InvalidDashaSequenceLord(DashaLord),
     /// The derive operation requires sidereal input but received a different zodiac mode.
     UnsupportedZodiac(ZodiacType),
     /// D9 derivation currently supports only the whole-sign house system.
@@ -41,8 +48,14 @@ impl fmt::Display for DeriveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::MissingMoon => write!(f, "moon position is required for vimshottari dasha"),
+            Self::MissingPlacementBody => {
+                write!(f, "pipeline placement is missing its body identifier")
+            }
             Self::InvalidHouseCusps(count) => {
                 write!(f, "expected 12 house cusps, got {count}")
+            }
+            Self::InvalidHouseNumber(value) => {
+                write!(f, "invalid house number: {value}; expected a value in 1..=12")
             }
             Self::InvalidLongitude(longitude) => {
                 write!(
@@ -52,6 +65,9 @@ impl fmt::Display for DeriveError {
             }
             Self::InvalidPada(value) => {
                 write!(f, "invalid pada value: {value}; expected a value in 1..=4")
+            }
+            Self::InvalidDashaSequenceLord(lord) => {
+                write!(f, "invalid Vimshottari sequence lord: {lord:?}")
             }
             Self::UnsupportedZodiac(zodiac) => {
                 write!(

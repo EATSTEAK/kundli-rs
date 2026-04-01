@@ -61,7 +61,7 @@ impl HouseTransformOp<SignContext> for WholeSignHouseTransform {
             houses: (0..NUM_HOUSES)
                 .map(|index| {
                     let house = HouseNumber::new((index + 1) as u8)
-                        .expect("whole-sign house index must stay within 1..=12");
+                        .ok_or(DeriveError::InvalidHouseNumber((index + 1) as u8))?;
                     let cusp_longitude =
                         normalize_longitude(first_house_cusp + index as f64 * DEGREES_PER_SIGN)?;
                     Ok(HouseSeed {
@@ -93,34 +93,39 @@ impl HouseTransformOp<SignContext> for CuspBasedHouseTransform {
         let ascendant_house =
             derive_house_from_cusps(input.ascendant.longitude, &input.house_cusps)?;
 
+        let ascendant_house = renumber_house(ascendant_house, first_house)?;
+        let bodies = input
+            .bodies
+            .iter()
+            .map(|placement| {
+                let absolute_house = derive_house_from_cusps(placement.longitude, &input.house_cusps)?;
+                let house = renumber_house(absolute_house, first_house)?;
+                Ok(HousedPlacement {
+                    house,
+                    placement: placement.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, DeriveError>>()?;
+        let houses = input
+            .house_cusps
+            .iter()
+            .enumerate()
+            .map(|(index, cusp)| {
+                let absolute_house = HouseNumber::new((index + 1) as u8)
+                    .ok_or(DeriveError::InvalidHouseNumber((index + 1) as u8))?;
+                let house = renumber_house(absolute_house, first_house)?;
+                Ok(HouseSeed {
+                    house,
+                    cusp_longitude: normalize_longitude(*cusp)?,
+                })
+            })
+            .collect::<Result<Vec<_>, DeriveError>>()?;
+
         Ok(HouseContext {
             ascendant: input.ascendant.clone(),
-            ascendant_house: renumber_house(ascendant_house, first_house),
-            bodies: input
-                .bodies
-                .iter()
-                .map(|placement| {
-                    let absolute_house =
-                        derive_house_from_cusps(placement.longitude, &input.house_cusps)?;
-                    Ok(HousedPlacement {
-                        house: renumber_house(absolute_house, first_house),
-                        placement: placement.clone(),
-                    })
-                })
-                .collect::<Result<Vec<_>, DeriveError>>()?,
-            houses: input
-                .house_cusps
-                .iter()
-                .enumerate()
-                .map(|(index, cusp)| {
-                    let absolute_house = HouseNumber::new((index + 1) as u8)
-                        .expect("cusp house index must stay within 1..=12");
-                    Ok(HouseSeed {
-                        house: renumber_house(absolute_house, first_house),
-                        cusp_longitude: normalize_longitude(*cusp)?,
-                    })
-                })
-                .collect::<Result<Vec<_>, DeriveError>>()?,
+            ascendant_house,
+            bodies,
+            houses,
         })
     }
 }
@@ -145,10 +150,13 @@ fn sign_index(longitude: f64) -> Result<usize, DeriveError> {
     Ok((longitude / DEGREES_PER_SIGN).floor() as usize % NUM_HOUSES)
 }
 
-fn renumber_house(absolute_house: HouseNumber, first_house: HouseNumber) -> HouseNumber {
+fn renumber_house(
+    absolute_house: HouseNumber,
+    first_house: HouseNumber,
+) -> Result<HouseNumber, DeriveError> {
     let renumbered =
         ((absolute_house.get() + NUM_HOUSES as u8 - first_house.get()) % NUM_HOUSES as u8) + 1;
-    HouseNumber::new(renumbered).expect("renumbered house must stay within 1..=12")
+    HouseNumber::new(renumbered).ok_or(DeriveError::InvalidHouseNumber(renumbered))
 }
 
 fn derive_house_from_cusps(
@@ -165,8 +173,8 @@ fn derive_house_from_cusps(
         let start = normalize_longitude(house_cusps[index])?;
         let end = normalize_longitude(house_cusps[(index + 1) % NUM_HOUSES])?;
         if is_in_range(planet_longitude, start, end) {
-            return Ok(HouseNumber::new((index + 1) as u8)
-                .expect("cusp-derived house must stay within 1..=12"));
+            return HouseNumber::new((index + 1) as u8)
+                .ok_or(DeriveError::InvalidHouseNumber((index + 1) as u8));
         }
     }
 
