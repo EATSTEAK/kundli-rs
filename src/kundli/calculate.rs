@@ -148,12 +148,7 @@ mod tests {
     }
 
     fn sample_request() -> AstroRequest {
-        AstroRequest::new(
-            2451545.0,
-            37.5665,
-            126.9780,
-            vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
-        )
+        AstroRequest::new(2451545.0, 37.5665, 126.9780)
     }
 
     fn sample_config(request: &AstroRequest) -> KundliConfig {
@@ -163,33 +158,45 @@ mod tests {
     }
 
     fn sample_astro() -> AstroResult {
-        AstroResult {
-            bodies: vec![
-                AstroBodyPosition {
-                    body: AstroBody::Sun,
+        let bodies = std::array::from_fn(|index| {
+            let body = AstroBody::ALL[index];
+            match body {
+                AstroBody::Sun => AstroBodyPosition {
+                    body,
                     longitude: 15.0,
                     latitude: 0.0,
                     distance: 1.0,
                     speed_longitude: 1.0,
                 },
-                AstroBodyPosition {
-                    body: AstroBody::Moon,
+                AstroBody::Moon => AstroBodyPosition {
+                    body,
                     longitude: 5.0,
                     latitude: 0.0,
                     distance: 1.0,
                     speed_longitude: 13.0,
                 },
-                AstroBodyPosition {
-                    body: AstroBody::Saturn,
+                AstroBody::Saturn => AstroBodyPosition {
+                    body,
                     longitude: 32.0,
                     latitude: 0.0,
                     distance: 1.0,
                     speed_longitude: -0.1,
                 },
-            ],
+                _ => AstroBodyPosition {
+                    body,
+                    longitude: 180.0 + index as f64,
+                    latitude: 0.0,
+                    distance: 1.0,
+                    speed_longitude: 0.1,
+                },
+            }
+        });
+
+        AstroResult {
+            bodies,
             ascendant_longitude: 45.0,
             mc_longitude: 135.0,
-            house_cusps: vec![],
+            house_cusps: [0.0; 12],
             meta: AstroMeta {
                 jd_ut: 2451545.0,
                 zodiac: ZodiacType::Sidereal,
@@ -215,7 +222,7 @@ mod tests {
         assert_eq!(result.meta.ayanamsha, Ayanamsha::Lahiri);
         assert_eq!(result.meta.house_system, HouseSystem::WholeSign);
         assert_eq!(result.meta.node_type, NodeType::True);
-        assert_eq!(result.meta.body_count, 3);
+        assert_eq!(result.meta.body_count, AstroBody::ALL.len());
         assert_eq!(result.lagna, result.d1.lagna);
         assert_eq!(result.planets, result.d1.planets);
         assert_eq!(result.houses, result.d1.houses);

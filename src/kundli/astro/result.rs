@@ -1,5 +1,8 @@
 use crate::kundli::astro::{AstroBody, Ayanamsha, ZodiacType};
 
+const BODY_COUNT: usize = AstroBody::ALL.len();
+const HOUSE_CUSP_COUNT: usize = 12;
+
 /// A single astronomical body position returned by an [`AstroEngine`](crate::kundli::astro::AstroEngine).
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroBodyPosition {
@@ -33,14 +36,23 @@ pub struct AstroMeta {
 /// Raw astronomical output used as input to kundli derivation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstroResult {
-    /// Requested body positions in the same logical universe as the request.
-    pub bodies: Vec<AstroBodyPosition>,
+    /// Canonical body positions for Sun..Ketu, always in [`AstroBody::ALL`] order.
+    pub bodies: [AstroBodyPosition; BODY_COUNT],
     /// Ascendant longitude in degrees.
     pub ascendant_longitude: f64,
     /// Midheaven longitude in degrees.
     pub mc_longitude: f64,
     /// House cusp longitudes in degrees.
-    pub house_cusps: Vec<f64>,
+    pub house_cusps: [f64; HOUSE_CUSP_COUNT],
     /// Calculation metadata.
     pub meta: AstroMeta,
+}
+
+impl AstroResult {
+    pub fn body(&self, body: AstroBody) -> &AstroBodyPosition {
+        self.bodies
+            .iter()
+            .find(|position| position.body == body)
+            .expect("AstroResult must contain every AstroBody exactly once")
+    }
 }

@@ -17,7 +17,7 @@ const HOUSE_ERROR_BUFFER_LEN: usize = 256;
 pub(crate) struct Ephemeris;
 
 pub(crate) struct EphemerisResult {
-    pub(crate) bodies: Vec<Position>,
+    pub(crate) bodies: [Position; 9],
     pub(crate) houses: HouseCusps,
     pub(crate) sidereal_time: f64,
     pub(crate) ayanamsha_value: Option<f64>,
@@ -33,27 +33,34 @@ impl Ephemeris {
         configure_ephemeris(config, request)?;
 
         let flags = calc_flags(request.zodiac);
-        let mut bodies = Vec::with_capacity(request.bodies.len());
+        let mut bodies = [Position {
+            longitude: 0.0,
+            latitude: 0.0,
+            distance: 0.0,
+            longitude_speed: 0.0,
+            latitude_speed: 0.0,
+            distance_speed: 0.0,
+        }; 9];
 
-        for body in request.bodies.iter().copied() {
-            match body {
+        for (index, body) in AstroBody::ALL.iter().copied().enumerate() {
+            bodies[index] = match body {
                 AstroBody::Ketu => {
                     let node = node_body(request.node_type);
                     let rahu = safe::calc_ut(request.jd_ut, node.to_int(), flags.raw())?;
-                    bodies.push(Position {
+                    Position {
                         longitude: safe::normalize_degrees(rahu.longitude + 180.0),
                         latitude: -rahu.latitude,
                         distance: rahu.distance,
                         longitude_speed: rahu.longitude_speed,
                         latitude_speed: -rahu.latitude_speed,
                         distance_speed: rahu.distance_speed,
-                    });
+                    }
                 }
                 _ => {
                     let planet = to_planet(body, request.node_type);
-                    bodies.push(safe::calc_ut(request.jd_ut, planet.to_int(), flags.raw())?);
+                    safe::calc_ut(request.jd_ut, planet.to_int(), flags.raw())?
                 }
-            }
+            };
         }
 
         let houses = if matches!(request.zodiac, ZodiacType::Sidereal) {

@@ -46,7 +46,7 @@ impl KundliDeriveInput {
                 .iter()
                 .map(prepare_body)
                 .collect::<Result<Vec<_>, _>>()?,
-            house_cusps: astro.house_cusps.clone(),
+            house_cusps: astro.house_cusps.to_vec(),
         })
     }
 
@@ -138,16 +138,27 @@ mod tests {
         }
     }
 
+    fn full_bodies(overrides: &[(AstroBody, f64, f64)]) -> [AstroBodyPosition; 9] {
+        std::array::from_fn(|index| {
+            let body = AstroBody::ALL[index];
+            if let Some((_, longitude, speed_longitude)) = overrides.iter().find(|(candidate, _, _)| *candidate == body) {
+                sample_body(body, *longitude, *speed_longitude)
+            } else {
+                sample_body(body, 180.0 + index as f64, 0.1)
+            }
+        })
+    }
+
     #[test]
     fn from_astro_precomputes_ascendant_and_body_snapshots() {
         let astro = AstroResult {
-            bodies: vec![
-                sample_body(AstroBody::Sun, 390.0, 1.0),
-                sample_body(AstroBody::Moon, -10.0, -0.1),
-            ],
+            bodies: full_bodies(&[
+                (AstroBody::Sun, 390.0, 1.0),
+                (AstroBody::Moon, -10.0, -0.1),
+            ]),
             ascendant_longitude: -15.0,
             mc_longitude: 90.0,
-            house_cusps: vec![],
+            house_cusps: [0.0; 12],
             meta: sample_meta(),
         };
 
@@ -157,57 +168,53 @@ mod tests {
         assert_eq!(input.ascendant.sign, Sign::Pisces);
         assert!((input.ascendant.degrees_in_sign - 15.0).abs() < EPSILON);
 
-        assert_eq!(input.bodies.len(), 2);
-        assert_eq!(input.bodies[0].body, AstroBody::Sun);
-        assert!((input.bodies[0].longitude - 30.0).abs() < EPSILON);
-        assert_eq!(input.bodies[0].sign, Sign::Taurus);
-        assert!((input.bodies[0].degrees_in_sign - 0.0).abs() < EPSILON);
-        assert!(!input.bodies[0].is_retrograde);
+        assert_eq!(input.bodies.len(), AstroBody::ALL.len());
+        let sun = input.body(AstroBody::Sun).unwrap();
+        assert!((sun.longitude - 30.0).abs() < EPSILON);
+        assert_eq!(sun.sign, Sign::Taurus);
+        assert!((sun.degrees_in_sign - 0.0).abs() < EPSILON);
+        assert!(!sun.is_retrograde);
 
-        assert_eq!(input.bodies[1].body, AstroBody::Moon);
-        assert!((input.bodies[1].longitude - 350.0).abs() < EPSILON);
-        assert_eq!(input.bodies[1].sign, Sign::Pisces);
-        assert!(input.bodies[1].is_retrograde);
+        let moon = input.body(AstroBody::Moon).unwrap();
+        assert!((moon.longitude - 350.0).abs() < EPSILON);
+        assert_eq!(moon.sign, Sign::Pisces);
+        assert!(moon.is_retrograde);
     }
 
     #[test]
-    fn from_astro_preserves_order_and_supports_body_lookup() {
+    fn from_astro_preserves_canonical_order_and_supports_body_lookup() {
         let astro = AstroResult {
-            bodies: vec![
-                sample_body(AstroBody::Saturn, 95.0, -0.1),
-                sample_body(AstroBody::Moon, 5.0, 13.0),
-                sample_body(AstroBody::Sun, 50.0, 1.0),
-            ],
+            bodies: full_bodies(&[
+                (AstroBody::Saturn, 95.0, -0.1),
+                (AstroBody::Moon, 5.0, 13.0),
+                (AstroBody::Sun, 50.0, 1.0),
+            ]),
             ascendant_longitude: 45.0,
             mc_longitude: 135.0,
-            house_cusps: vec![],
+            house_cusps: [0.0; 12],
             meta: sample_meta(),
         };
 
         let input = KundliDeriveInput::from_astro(&astro).unwrap();
 
         assert_eq!(
-            input
-                .bodies
-                .iter()
-                .map(|body| body.body)
-                .collect::<Vec<_>>(),
-            vec![AstroBody::Saturn, AstroBody::Moon, AstroBody::Sun]
+            input.bodies.iter().map(|body| body.body).collect::<Vec<_>>(),
+            AstroBody::ALL.to_vec()
         );
         assert_eq!(input.body(AstroBody::Moon).unwrap().body, AstroBody::Moon);
-        assert_eq!(input.body(AstroBody::Rahu), None);
+        assert_eq!(input.body(AstroBody::Rahu).unwrap().body, AstroBody::Rahu);
     }
 
     #[test]
     fn to_navamsa_transforms_ascendant_and_bodies() {
         let astro = AstroResult {
-            bodies: vec![
-                sample_body(AstroBody::Sun, 15.0, 1.0),
-                sample_body(AstroBody::Saturn, 32.0, -0.1),
-            ],
+            bodies: full_bodies(&[
+                (AstroBody::Sun, 15.0, 1.0),
+                (AstroBody::Saturn, 32.0, -0.1),
+            ]),
             ascendant_longitude: 45.0,
             mc_longitude: 135.0,
-            house_cusps: vec![],
+            house_cusps: [0.0; 12],
             meta: sample_meta(),
         };
 
@@ -220,34 +227,34 @@ mod tests {
         assert_eq!(navamsa.ascendant.sign, Sign::Taurus);
         assert!((navamsa.ascendant.degrees_in_sign - 15.0).abs() < EPSILON);
 
-        assert_eq!(navamsa.bodies[0].body, AstroBody::Sun);
-        assert!((navamsa.bodies[0].longitude - 135.0).abs() < EPSILON);
-        assert_eq!(navamsa.bodies[0].sign, Sign::Leo);
-        assert!((navamsa.bodies[0].degrees_in_sign - 15.0).abs() < EPSILON);
-        assert!(!navamsa.bodies[0].is_retrograde);
+        let sun = navamsa.body(AstroBody::Sun).unwrap();
+        assert!((sun.longitude - 135.0).abs() < EPSILON);
+        assert_eq!(sun.sign, Sign::Leo);
+        assert!((sun.degrees_in_sign - 15.0).abs() < EPSILON);
+        assert!(!sun.is_retrograde);
 
-        assert_eq!(navamsa.bodies[1].body, AstroBody::Saturn);
-        assert!((navamsa.bodies[1].longitude - 288.0).abs() < EPSILON);
-        assert_eq!(navamsa.bodies[1].sign, Sign::Capricorn);
-        assert!(navamsa.bodies[1].is_retrograde);
+        let saturn = navamsa.body(AstroBody::Saturn).unwrap();
+        assert!((saturn.longitude - 288.0).abs() < EPSILON);
+        assert_eq!(saturn.sign, Sign::Capricorn);
+        assert!(saturn.is_retrograde);
     }
 
     #[test]
     fn to_navamsa_recomputes_nakshatra_progress_for_transformed_longitudes() {
         let astro = AstroResult {
-            bodies: vec![sample_body(AstroBody::Moon, 5.0, 13.0)],
+            bodies: full_bodies(&[(AstroBody::Moon, 5.0, 13.0)]),
             ascendant_longitude: 10.0,
             mc_longitude: 100.0,
-            house_cusps: vec![],
+            house_cusps: [0.0; 12],
             meta: sample_meta(),
         };
 
         let input = KundliDeriveInput::from_astro(&astro).unwrap();
         let navamsa = input.to_navamsa().unwrap();
 
-        assert!((input.bodies[0].nakshatra_progress_ratio - 0.375).abs() < EPSILON);
-        assert!((navamsa.bodies[0].longitude - 45.0).abs() < EPSILON);
-        assert!((navamsa.bodies[0].nakshatra_progress_ratio - 0.375).abs() < EPSILON);
+        assert!((input.body(AstroBody::Moon).unwrap().nakshatra_progress_ratio - 0.375).abs() < EPSILON);
+        assert!((navamsa.body(AstroBody::Moon).unwrap().longitude - 45.0).abs() < EPSILON);
+        assert!((navamsa.body(AstroBody::Moon).unwrap().nakshatra_progress_ratio - 0.375).abs() < EPSILON);
     }
 
     #[test]

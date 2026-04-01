@@ -9,15 +9,10 @@
 //!
 //! ```no_run
 //! use kundli_rs::calculate_kundli;
-//! use kundli_rs::kundli::astro::{AstroBody, AstroRequest};
+//! use kundli_rs::kundli::astro::AstroRequest;
 //! use kundli_rs::kundli::config::KundliConfig;
 //!
-//! let request = AstroRequest::new(
-//!     2451545.0,
-//!     37.5665,
-//!     126.9780,
-//!     vec![AstroBody::Sun, AstroBody::Moon, AstroBody::Saturn],
-//! );
+//! let request = AstroRequest::new(2451545.0, 37.5665, 126.9780);
 //!
 //! let config = KundliConfig::from_request(&request)
 //!     .with_include_d9(true)

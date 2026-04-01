@@ -20,7 +20,6 @@ struct SmokeFixture {
     ayanamsha: String,
     house_system: String,
     node_type: String,
-    bodies: Vec<String>,
     expected_body_count: usize,
     expected_house_cusp_count: usize,
     expect_ayanamsha_value: bool,
@@ -36,21 +35,6 @@ fn fixture_path(name: &str) -> PathBuf {
 
 fn load_fixture() -> SmokeFixture {
     serde_json::from_str(&fs::read_to_string(fixture_path("smoke_case.json")).unwrap()).unwrap()
-}
-
-fn to_body(body: &str) -> AstroBody {
-    match body {
-        "Sun" => AstroBody::Sun,
-        "Moon" => AstroBody::Moon,
-        "Mars" => AstroBody::Mars,
-        "Mercury" => AstroBody::Mercury,
-        "Jupiter" => AstroBody::Jupiter,
-        "Venus" => AstroBody::Venus,
-        "Saturn" => AstroBody::Saturn,
-        "Rahu" => AstroBody::Rahu,
-        "Ketu" => AstroBody::Ketu,
-        other => panic!("unsupported AstroBody fixture value: {other}"),
-    }
 }
 
 fn to_zodiac(zodiac: &str) -> ZodiacType {
@@ -89,16 +73,11 @@ fn to_node_type(node_type: &str) -> NodeType {
 }
 
 fn build_request(fixture: &SmokeFixture) -> AstroRequest {
-    AstroRequest::new(
-        fixture.jd_ut,
-        fixture.latitude,
-        fixture.longitude,
-        fixture.bodies.iter().map(|body| to_body(body)).collect(),
-    )
-    .with_zodiac(to_zodiac(&fixture.zodiac))
-    .with_ayanamsha(to_ayanamsha(&fixture.ayanamsha))
-    .with_house_system(to_house_system(&fixture.house_system))
-    .with_node_type(to_node_type(&fixture.node_type))
+    AstroRequest::new(fixture.jd_ut, fixture.latitude, fixture.longitude)
+        .with_zodiac(to_zodiac(&fixture.zodiac))
+        .with_ayanamsha(to_ayanamsha(&fixture.ayanamsha))
+        .with_house_system(to_house_system(&fixture.house_system))
+        .with_node_type(to_node_type(&fixture.node_type))
 }
 
 fn build_config(request: &AstroRequest) -> KundliConfig {
@@ -108,7 +87,7 @@ fn build_config(request: &AstroRequest) -> KundliConfig {
 }
 
 #[test]
-fn smoke_fixture_returns_requested_bodies_and_house_shape() {
+fn smoke_fixture_returns_full_bodies_and_house_shape() {
     let fixture = load_fixture();
     let request = build_request(&fixture);
     let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
@@ -118,12 +97,8 @@ fn smoke_fixture_returns_requested_bodies_and_house_shape() {
     assert_eq!(result.bodies.len(), fixture.expected_body_count);
     assert_eq!(result.house_cusps.len(), fixture.expected_house_cusp_count);
     assert_eq!(
-        result
-            .bodies
-            .iter()
-            .map(|position| position.body)
-            .collect::<Vec<_>>(),
-        request.bodies
+        result.bodies.iter().map(|position| position.body).collect::<Vec<_>>(),
+        AstroBody::ALL.to_vec()
     );
     assert!(result.ascendant_longitude.is_finite());
     assert!(result.mc_longitude.is_finite());
@@ -161,18 +136,12 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
     assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
     assert_eq!(
-        d1.planets
-            .iter()
-            .map(|planet| planet.body)
-            .collect::<Vec<_>>(),
-        request.bodies
+        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        AstroBody::ALL.to_vec()
     );
     assert_eq!(
-        d9.planets
-            .iter()
-            .map(|planet| planet.body)
-            .collect::<Vec<_>>(),
-        request.bodies
+        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        AstroBody::ALL.to_vec()
     );
     assert!(d1.lagna.longitude.is_finite());
     assert!(d9.lagna.longitude.is_finite());
@@ -230,8 +199,5 @@ fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
     assert!(final_result.d9.is_none());
     assert!(final_result.dasha.is_none());
     assert_eq!(final_result.d1.planets.len(), fixture.expected_body_count);
-    assert_eq!(
-        final_result.d1.houses.len(),
-        fixture.expected_house_cusp_count
-    );
+    assert_eq!(final_result.d1.houses.len(), fixture.expected_house_cusp_count);
 }

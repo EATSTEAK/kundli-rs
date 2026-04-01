@@ -29,29 +29,25 @@ fn sample_body(body: AstroBody, longitude: f64) -> AstroBodyPosition {
     }
 }
 
-#[test]
-fn derive_vimshottari_dasha_returns_missing_moon_when_moon_absent() {
-    let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Sun, 10.0)],
-        ascendant_longitude: 0.0,
-        mc_longitude: 90.0,
-        house_cusps: vec![],
-        meta: sample_meta(2451545.0),
-    };
-
-    let error = derive_vimshottari_dasha(&astro).unwrap_err();
-
-    assert_eq!(error, DeriveError::MissingMoon);
+fn full_bodies(overrides: &[(AstroBody, f64)]) -> [AstroBodyPosition; 9] {
+    std::array::from_fn(|index| {
+        let body = AstroBody::ALL[index];
+        if let Some((_, longitude)) = overrides.iter().find(|(candidate, _)| *candidate == body) {
+            sample_body(body, *longitude)
+        } else {
+            sample_body(body, 180.0 + index as f64)
+        }
+    })
 }
 
 #[test]
 fn derive_vimshottari_dasha_derives_current_period_and_full_sequence() {
     let birth_jd_ut = 2451545.0;
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Moon, DEGREES_PER_NAKSHATRA / 2.0)],
+        bodies: full_bodies(&[(AstroBody::Moon, DEGREES_PER_NAKSHATRA / 2.0)]),
         ascendant_longitude: 0.0,
         mc_longitude: 90.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(birth_jd_ut),
     };
 
@@ -65,11 +61,7 @@ fn derive_vimshottari_dasha_derives_current_period_and_full_sequence() {
     assert_eq!(dasha.mahadashas.len(), 9);
     assert_eq!(dasha.mahadashas[0], dasha.current_mahadasha);
     assert_eq!(
-        dasha
-            .mahadashas
-            .iter()
-            .map(|period| period.lord)
-            .collect::<Vec<_>>(),
+        dasha.mahadashas.iter().map(|period| period.lord).collect::<Vec<_>>(),
         vec![
             DashaLord::Ketu,
             DashaLord::Venus,
@@ -91,10 +83,10 @@ fn derive_vimshottari_dasha_derives_current_period_and_full_sequence() {
 #[test]
 fn derive_vimshottari_dasha_wraps_sequence_after_mercury() {
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Moon, 350.0)],
+        bodies: full_bodies(&[(AstroBody::Moon, 350.0)]),
         ascendant_longitude: 0.0,
         mc_longitude: 90.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(2451545.0),
     };
 
@@ -109,10 +101,10 @@ fn derive_vimshottari_dasha_wraps_sequence_after_mercury() {
 #[test]
 fn derive_vimshottari_dasha_rejects_non_sidereal_astro_results() {
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Moon, 10.0)],
+        bodies: full_bodies(&[(AstroBody::Moon, 10.0)]),
         ascendant_longitude: 0.0,
         mc_longitude: 90.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: AstroMeta {
             zodiac: ZodiacType::Tropical,
             ..sample_meta(2451545.0)

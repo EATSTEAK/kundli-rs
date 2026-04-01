@@ -33,17 +33,28 @@ fn sample_body(body: AstroBody, longitude: f64, speed_longitude: f64) -> AstroBo
     }
 }
 
+fn full_bodies(overrides: &[(AstroBody, f64, f64)]) -> [AstroBodyPosition; 9] {
+    std::array::from_fn(|index| {
+        let body = AstroBody::ALL[index];
+        if let Some((_, longitude, speed_longitude)) = overrides.iter().find(|(candidate, _, _)| *candidate == body) {
+            sample_body(body, *longitude, *speed_longitude)
+        } else {
+            sample_body(body, 180.0 + index as f64, 0.1)
+        }
+    })
+}
+
 #[test]
 fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     let astro = AstroResult {
-        bodies: vec![
-            sample_body(AstroBody::Sun, 15.0, 1.0),
-            sample_body(AstroBody::Moon, 0.0, 13.0),
-            sample_body(AstroBody::Saturn, 32.0, -0.1),
-        ],
+        bodies: full_bodies(&[
+            (AstroBody::Sun, 15.0, 1.0),
+            (AstroBody::Moon, 0.0, 13.0),
+            (AstroBody::Saturn, 32.0, -0.1),
+        ]),
         ascendant_longitude: 45.0,
         mc_longitude: 135.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(),
     };
     let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
@@ -54,14 +65,14 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert!((chart.lagna.degrees_in_sign - 15.0).abs() < EPSILON);
     assert!((chart.lagna.longitude - 45.0).abs() < EPSILON);
 
-    let sun = &chart.planets[0];
+    let sun = chart.planets.iter().find(|planet| planet.body == AstroBody::Sun).unwrap();
     assert_eq!(sun.sign, Sign::Leo);
     assert!((sun.longitude - 135.0).abs() < EPSILON);
     assert!((sun.degrees_in_sign - 15.0).abs() < EPSILON);
     assert_eq!(sun.house, house(4));
     assert!(!sun.is_retrograde);
 
-    let moon = &chart.planets[1];
+    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
     assert_eq!(moon.sign, Sign::Aries);
     assert!(moon.longitude.abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
@@ -69,7 +80,7 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
     assert_eq!(moon.nakshatra.nakshatra, Nakshatra::Ashwini);
     assert_eq!(moon.nakshatra.pada, Pada::new(1).unwrap());
 
-    let saturn = &chart.planets[2];
+    let saturn = chart.planets.iter().find(|planet| planet.body == AstroBody::Saturn).unwrap();
     assert_eq!(saturn.sign, Sign::Capricorn);
     assert!((saturn.longitude - 288.0).abs() < EPSILON);
     assert!((saturn.degrees_in_sign - 18.0).abs() < EPSILON);
@@ -80,32 +91,32 @@ fn derive_d9_chart_transforms_lagna_and_planets_with_whole_sign_houses() {
 #[test]
 fn derive_d9_chart_handles_navamsa_boundaries_across_sign_modalities() {
     let astro = AstroResult {
-        bodies: vec![
-            sample_body(AstroBody::Sun, NAVAMSA_BOUNDARY, 1.0),
-            sample_body(AstroBody::Moon, 30.0, 13.0),
-            sample_body(AstroBody::Mercury, 60.0, 0.5),
-        ],
+        bodies: full_bodies(&[
+            (AstroBody::Sun, NAVAMSA_BOUNDARY, 1.0),
+            (AstroBody::Moon, 30.0, 13.0),
+            (AstroBody::Mercury, 60.0, 0.5),
+        ]),
         ascendant_longitude: 0.0,
         mc_longitude: 90.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(),
     };
 
     let chart = derive_d9_chart(&astro, &KundliConfig::default()).unwrap();
 
-    let sun = &chart.planets[0];
+    let sun = chart.planets.iter().find(|planet| planet.body == AstroBody::Sun).unwrap();
     assert_eq!(sun.sign, Sign::Taurus);
     assert!((sun.longitude - 30.0).abs() < EPSILON);
     assert!(sun.degrees_in_sign.abs() < EPSILON);
     assert_eq!(sun.house, house(2));
 
-    let moon = &chart.planets[1];
+    let moon = chart.planets.iter().find(|planet| planet.body == AstroBody::Moon).unwrap();
     assert_eq!(moon.sign, Sign::Capricorn);
     assert!((moon.longitude - 270.0).abs() < EPSILON);
     assert!(moon.degrees_in_sign.abs() < EPSILON);
     assert_eq!(moon.house, house(10));
 
-    let mercury = &chart.planets[2];
+    let mercury = chart.planets.iter().find(|planet| planet.body == AstroBody::Mercury).unwrap();
     assert_eq!(mercury.sign, Sign::Libra);
     assert!((mercury.longitude - 180.0).abs() < EPSILON);
     assert!(mercury.degrees_in_sign.abs() < EPSILON);
@@ -115,29 +126,26 @@ fn derive_d9_chart_handles_navamsa_boundaries_across_sign_modalities() {
 #[test]
 fn derive_d9_chart_rejects_non_whole_sign_house_systems() {
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Mercury, 50.0, 0.5)],
+        bodies: full_bodies(&[(AstroBody::Mercury, 50.0, 0.5)]),
         ascendant_longitude: 45.0,
         mc_longitude: 135.0,
-        house_cusps: vec![0.0, 30.0, 60.0],
+        house_cusps: [0.0; 12],
         meta: sample_meta(),
     };
     let config = KundliConfig::default().with_house_system(HouseSystem::Equal);
 
     let error = derive_d9_chart(&astro, &config).unwrap_err();
 
-    assert_eq!(
-        error,
-        DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal)
-    );
+    assert_eq!(error, DeriveError::UnsupportedD9HouseSystem(HouseSystem::Equal));
 }
 
 #[test]
 fn derive_d9_chart_rejects_non_sidereal_astro_results() {
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Mercury, 50.0, 0.5)],
+        bodies: full_bodies(&[(AstroBody::Mercury, 50.0, 0.5)]),
         ascendant_longitude: 45.0,
         mc_longitude: 135.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: AstroMeta {
             zodiac: ZodiacType::Tropical,
             ..sample_meta()
@@ -152,10 +160,10 @@ fn derive_d9_chart_rejects_non_sidereal_astro_results() {
 #[test]
 fn derive_d9_chart_returns_error_for_invalid_ascendant() {
     let astro = AstroResult {
-        bodies: vec![],
+        bodies: full_bodies(&[]),
         ascendant_longitude: f64::NAN,
         mc_longitude: 135.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(),
     };
 
@@ -167,10 +175,10 @@ fn derive_d9_chart_returns_error_for_invalid_ascendant() {
 #[test]
 fn derive_d9_chart_returns_error_for_invalid_longitude() {
     let astro = AstroResult {
-        bodies: vec![sample_body(AstroBody::Sun, f64::INFINITY, 1.0)],
+        bodies: full_bodies(&[(AstroBody::Sun, f64::INFINITY, 1.0)]),
         ascendant_longitude: 45.0,
         mc_longitude: 135.0,
-        house_cusps: vec![],
+        house_cusps: [0.0; 12],
         meta: sample_meta(),
     };
 
