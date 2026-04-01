@@ -2,9 +2,7 @@ use kundli_rs::kundli::astro::{
     AstroBody, AstroBodyPosition, AstroMeta, AstroResult, Ayanamsha, HouseSystem, ZodiacType,
 };
 use kundli_rs::kundli::config::KundliConfig;
-use kundli_rs::kundli::derive::d1::{
-    derive_d1_chart, derive_houses, derive_lagna, derive_planet_placements,
-};
+use kundli_rs::kundli::derive::d1::derive_d1_chart;
 use kundli_rs::kundli::error::DeriveError;
 use kundli_rs::kundli::model::{HouseNumber, Nakshatra, Pada, Sign};
 
@@ -46,7 +44,7 @@ fn full_bodies(overrides: &[(AstroBody, f64, f64)]) -> [AstroBodyPosition; 9] {
 }
 
 #[test]
-fn derive_lagna_normalizes_negative_ascendant() {
+fn derive_d1_chart_normalizes_negative_ascendant() {
     let astro = AstroResult {
         bodies: full_bodies(&[]),
         ascendant_longitude: -15.0,
@@ -55,11 +53,11 @@ fn derive_lagna_normalizes_negative_ascendant() {
         meta: sample_meta(),
     };
 
-    let lagna = derive_lagna(&astro).unwrap();
+    let chart = derive_d1_chart(&astro, &KundliConfig::default()).unwrap();
 
-    assert_eq!(lagna.sign, Sign::Pisces);
-    assert!((lagna.degrees_in_sign - 15.0).abs() < EPSILON);
-    assert!((lagna.longitude - 345.0).abs() < EPSILON);
+    assert_eq!(chart.lagna.sign, Sign::Pisces);
+    assert!((chart.lagna.degrees_in_sign - 15.0).abs() < EPSILON);
+    assert!((chart.lagna.longitude - 345.0).abs() < EPSILON);
 }
 
 #[test]
@@ -113,7 +111,7 @@ fn derive_d1_chart_whole_sign_derives_lagna_planets_and_houses() {
 }
 
 #[test]
-fn derive_planet_placements_and_houses_use_cusps_for_non_whole_sign_systems() {
+fn derive_d1_chart_uses_cusps_for_non_whole_sign_systems() {
     let astro = AstroResult {
         bodies: full_bodies(&[(AstroBody::Mercury, 60.0, 0.5)]),
         ascendant_longitude: 45.0,
@@ -125,24 +123,23 @@ fn derive_planet_placements_and_houses_use_cusps_for_non_whole_sign_systems() {
     };
     let config = KundliConfig::default().with_house_system(HouseSystem::Equal);
 
-    let planets = derive_planet_placements(&astro, &config).unwrap();
-    let houses = derive_houses(&astro, &config).unwrap();
+    let chart = derive_d1_chart(&astro, &config).unwrap();
 
-    let mercury = planets.iter().find(|planet| planet.body == AstroBody::Mercury).unwrap();
+    let mercury = chart.planets.iter().find(|planet| planet.body == AstroBody::Mercury).unwrap();
     assert_eq!(mercury.sign, Sign::Gemini);
     assert_eq!(mercury.house, house(1));
 
-    assert_eq!(houses.len(), 12);
-    assert_eq!(houses[0].house, house(1));
-    assert_eq!(houses[0].sign, Sign::Taurus);
-    assert!((houses[0].cusp_longitude - 45.0).abs() < EPSILON);
-    assert_eq!(houses[11].house, house(12));
-    assert_eq!(houses[11].sign, Sign::Aries);
-    assert!((houses[11].cusp_longitude - 15.0).abs() < EPSILON);
+    assert_eq!(chart.houses.len(), 12);
+    assert_eq!(chart.houses[0].house, house(1));
+    assert_eq!(chart.houses[0].sign, Sign::Taurus);
+    assert!((chart.houses[0].cusp_longitude - 45.0).abs() < EPSILON);
+    assert_eq!(chart.houses[11].house, house(12));
+    assert_eq!(chart.houses[11].sign, Sign::Aries);
+    assert!((chart.houses[11].cusp_longitude - 15.0).abs() < EPSILON);
 }
 
 #[test]
-fn derive_lagna_returns_error_for_invalid_ascendant() {
+fn derive_d1_chart_returns_error_for_invalid_ascendant() {
     let astro = AstroResult {
         bodies: full_bodies(&[]),
         ascendant_longitude: f64::NAN,
@@ -151,13 +148,13 @@ fn derive_lagna_returns_error_for_invalid_ascendant() {
         meta: sample_meta(),
     };
 
-    let error = derive_lagna(&astro).unwrap_err();
+    let error = derive_d1_chart(&astro, &KundliConfig::default()).unwrap_err();
 
     assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_nan()));
 }
 
 #[test]
-fn derive_planet_placements_returns_error_for_invalid_body_longitude() {
+fn derive_d1_chart_returns_error_for_invalid_body_longitude() {
     let astro = AstroResult {
         bodies: full_bodies(&[(AstroBody::Sun, f64::INFINITY, 1.0)]),
         ascendant_longitude: 45.0,
@@ -167,23 +164,7 @@ fn derive_planet_placements_returns_error_for_invalid_body_longitude() {
     };
     let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
 
-    let error = derive_planet_placements(&astro, &config).unwrap_err();
+    let error = derive_d1_chart(&astro, &config).unwrap_err();
 
     assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_infinite()));
-}
-
-#[test]
-fn derive_houses_returns_error_for_invalid_ascendant_in_whole_sign() {
-    let astro = AstroResult {
-        bodies: full_bodies(&[]),
-        ascendant_longitude: f64::NAN,
-        mc_longitude: 90.0,
-        house_cusps: [0.0; 12],
-        meta: sample_meta(),
-    };
-    let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
-
-    let error = derive_houses(&astro, &config).unwrap_err();
-
-    assert!(matches!(error, DeriveError::InvalidLongitude(value) if value.is_nan()));
 }
