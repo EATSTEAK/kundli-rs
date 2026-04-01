@@ -13,6 +13,8 @@ pub enum ChartSelectionError {
     InvalidDivision(u8),
     /// The selected chart kind does not support the given house mode.
     UnexpectedHouseMode(ChartKind),
+    /// The selected chart kind requires a cusp-based house mode.
+    CuspBasedHouseModeRequired(ChartKind),
 }
 
 impl fmt::Display for ChartSelectionError {
@@ -20,10 +22,19 @@ impl fmt::Display for ChartSelectionError {
         match self {
             Self::Empty => write!(f, "at least one chart must be requested"),
             Self::InvalidDivision(division) => {
-                write!(f, "invalid divisional chart: D{division}; expected division >= 1")
+                write!(
+                    f,
+                    "invalid divisional chart: D{division}; expected division >= 1"
+                )
             }
             Self::UnexpectedHouseMode(kind) => {
-                write!(f, "chart kind {kind:?} does not support the selected house mode")
+                write!(
+                    f,
+                    "chart kind {kind:?} does not support the selected house mode"
+                )
+            }
+            Self::CuspBasedHouseModeRequired(kind) => {
+                write!(f, "chart kind {kind:?} requires a cusp-based house mode")
             }
         }
     }
@@ -56,10 +67,16 @@ impl fmt::Display for DeriveError {
                 write!(f, "expected 12 house cusps, got {count}")
             }
             Self::InvalidHouseNumber(value) => {
-                write!(f, "invalid house number: {value}; expected a value in 1..=12")
+                write!(
+                    f,
+                    "invalid house number: {value}; expected a value in 1..=12"
+                )
             }
             Self::InvalidLongitude(longitude) => {
-                write!(f, "invalid longitude: {longitude}; expected a finite degree value")
+                write!(
+                    f,
+                    "invalid longitude: {longitude}; expected a finite degree value"
+                )
             }
             Self::InvalidPada(value) => {
                 write!(f, "invalid pada value: {value}; expected a value in 1..=4")
@@ -68,7 +85,10 @@ impl fmt::Display for DeriveError {
                 write!(f, "invalid Vimshottari sequence lord: {lord:?}")
             }
             Self::InvalidDivision(division) => {
-                write!(f, "invalid divisional chart: D{division}; expected division >= 1")
+                write!(
+                    f,
+                    "invalid divisional chart: D{division}; expected division >= 1"
+                )
             }
             Self::UnsupportedZodiac(zodiac) => {
                 write!(
@@ -77,7 +97,10 @@ impl fmt::Display for DeriveError {
                 )
             }
             Self::UnsupportedHouseSystem(house_system) => {
-                write!(f, "unsupported house system for derive operation: {house_system:?}")
+                write!(
+                    f,
+                    "unsupported house system for derive operation: {house_system:?}"
+                )
             }
         }
     }

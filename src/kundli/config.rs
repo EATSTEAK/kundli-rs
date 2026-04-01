@@ -94,7 +94,11 @@ impl ChartSpec {
     }
 
     pub const fn chalit() -> Self {
-        Self::new(ChartKind::Chalit, ReferenceKey::Lagna, HouseMode::Configured)
+        Self::new(
+            ChartKind::Chalit,
+            ReferenceKey::Lagna,
+            HouseMode::Configured,
+        )
     }
 
     pub const fn divisional_bhava(division: u8) -> Self {
@@ -212,10 +216,13 @@ impl KundliConfig {
                 ChartKind::Varga { .. } if chart.house_mode == HouseMode::None => {
                     return Err(ChartSelectionError::UnexpectedHouseMode(chart.kind).into());
                 }
-                ChartKind::Rasi | ChartKind::Bhava | ChartKind::Chalit | ChartKind::DivisionalBhava { .. }
-                    if chart.house_mode == HouseMode::None =>
-                {
+                ChartKind::Rasi if chart.house_mode == HouseMode::None => {
                     return Err(ChartSelectionError::UnexpectedHouseMode(chart.kind).into());
+                }
+                ChartKind::Bhava | ChartKind::Chalit | ChartKind::DivisionalBhava { .. }
+                    if !matches!(chart.house_mode, HouseMode::CuspBased(_)) =>
+                {
+                    return Err(ChartSelectionError::CuspBasedHouseModeRequired(chart.kind).into());
                 }
                 _ => {}
             }
@@ -280,7 +287,53 @@ mod tests {
 
         assert_eq!(
             config.charts,
-            vec![ChartSpec::d1(), ChartSpec::d9(), ChartSpec::vimshottari_dasha()]
+            vec![
+                ChartSpec::d1(),
+                ChartSpec::d9(),
+                ChartSpec::vimshottari_dasha()
+            ]
+        );
+    }
+
+    #[test]
+    fn validate_rejects_bhava_without_explicit_cusp_based_mode() {
+        let mut config = KundliConfig::default().with_charts(&[ChartSpec::bhava()]);
+
+        let error = config.validate().unwrap_err();
+
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(ChartSelectionError::CuspBasedHouseModeRequired(
+                ChartKind::Bhava,
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_chalit_without_explicit_cusp_based_mode() {
+        let mut config = KundliConfig::default().with_charts(&[ChartSpec::chalit()]);
+
+        let error = config.validate().unwrap_err();
+
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(ChartSelectionError::CuspBasedHouseModeRequired(
+                ChartKind::Chalit,
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_divisional_bhava_without_cusp_based_mode() {
+        let mut config = KundliConfig::default().with_charts(&[ChartSpec::divisional_bhava(9)]);
+
+        let error = config.validate().unwrap_err();
+
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(ChartSelectionError::CuspBasedHouseModeRequired(
+                ChartKind::DivisionalBhava { division: 9 },
+            ))
         );
     }
 }

@@ -21,7 +21,10 @@ impl Materialize for HouseContext {
                 .into_iter()
                 .map(|body| {
                     Ok(PlanetPlacement {
-                        body: body.placement.body.ok_or(DeriveError::MissingPlacementBody)?,
+                        body: body
+                            .placement
+                            .body
+                            .ok_or(DeriveError::MissingPlacementBody)?,
                         longitude: body.placement.longitude,
                         sign: body.placement.sign,
                         degrees_in_sign: body.placement.degrees_in_sign,

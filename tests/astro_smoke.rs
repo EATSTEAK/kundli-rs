@@ -5,7 +5,7 @@ use kundli_rs::kundli::astro::{
     SwissEphConfig, ZodiacType,
 };
 use kundli_rs::kundli::calculate::calculate_kundli_with_engine;
-use kundli_rs::kundli::config::{ChartSpec, KundliConfig};
+use kundli_rs::kundli::config::{ChartSpec, HouseMode, KundliConfig};
 use kundli_rs::kundli::derive::d1::derive_d1_chart;
 use kundli_rs::kundli::derive::d9::derive_d9_chart;
 use kundli_rs::kundli::derive::dasha::derive_vimshottari_dasha;
@@ -143,11 +143,17 @@ fn smoke_fixture_derives_d1_d9_and_dasha_from_astro_result() {
     assert!(dasha.current_mahadasha.start_jd_ut <= result.meta.jd_ut);
     assert!(dasha.current_mahadasha.end_jd_ut > result.meta.jd_ut);
     assert_eq!(
-        d1.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d1.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert_eq!(
-        d9.planets.iter().map(|planet| planet.body).collect::<Vec<_>>(),
+        d9.planets
+            .iter()
+            .map(|planet| planet.body)
+            .collect::<Vec<_>>(),
         AstroBody::ALL.to_vec()
     );
     assert!(d1.lagna.longitude.is_finite());
@@ -177,8 +183,14 @@ fn smoke_fixture_final_api_matches_manual_pipeline() {
     let manual_dasha = derive_vimshottari_dasha(&astro).unwrap();
     let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
 
-    let final_d1 = final_result.chart(ChartSpec::d1()).and_then(ChartLayer::as_chart).unwrap();
-    let final_d9 = final_result.chart(ChartSpec::d9()).and_then(ChartLayer::as_chart).unwrap();
+    let final_d1 = final_result
+        .chart(ChartSpec::d1())
+        .and_then(ChartLayer::as_chart)
+        .unwrap();
+    let final_d9 = final_result
+        .chart(ChartSpec::d9())
+        .and_then(ChartLayer::as_chart)
+        .unwrap();
 
     assert_eq!(final_d1.lagna, manual_d1.lagna);
     assert_eq!(final_d1.planets, manual_d1.planets);
@@ -218,4 +230,33 @@ fn smoke_fixture_final_api_omits_optional_results_when_disabled() {
     assert!(final_result.chart(ChartSpec::vimshottari_dasha()).is_none());
     assert_eq!(d1.planets.len(), fixture.expected_body_count);
     assert_eq!(d1.houses.len(), fixture.expected_house_cusp_count);
+}
+
+#[test]
+fn smoke_fixture_rasi_bhava_and_chalit_currently_materialize_the_same_chart() {
+    let fixture = load_fixture();
+    let request = build_request(&fixture).with_house_system(HouseSystem::Placidus);
+    let config = KundliConfig::from_request(&request).with_charts(&[
+        ChartSpec::rasi(),
+        ChartSpec::bhava().with_house_mode(HouseMode::CuspBased(HouseSystem::Placidus)),
+        ChartSpec::chalit().with_house_mode(HouseMode::CuspBased(HouseSystem::Placidus)),
+    ]);
+    let engine = SwissEphAstroEngine::new(SwissEphConfig::new());
+
+    let final_result = calculate_kundli_with_engine(&engine, &request, &config).unwrap();
+    let rasi = final_result
+        .chart(ChartSpec::rasi())
+        .and_then(ChartLayer::as_chart)
+        .unwrap();
+    let bhava = final_result
+        .chart(ChartSpec::bhava().with_house_mode(HouseMode::CuspBased(HouseSystem::Placidus)))
+        .and_then(ChartLayer::as_chart)
+        .unwrap();
+    let chalit = final_result
+        .chart(ChartSpec::chalit().with_house_mode(HouseMode::CuspBased(HouseSystem::Placidus)))
+        .and_then(ChartLayer::as_chart)
+        .unwrap();
+
+    assert_eq!(rasi, bhava);
+    assert_eq!(rasi, chalit);
 }

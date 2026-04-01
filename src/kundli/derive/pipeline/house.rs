@@ -98,7 +98,8 @@ impl HouseTransformOp<SignContext> for CuspBasedHouseTransform {
             .bodies
             .iter()
             .map(|placement| {
-                let absolute_house = derive_house_from_cusps(placement.longitude, &input.house_cusps)?;
+                let absolute_house =
+                    derive_house_from_cusps(placement.longitude, &input.house_cusps)?;
                 let house = renumber_house(absolute_house, first_house)?;
                 Ok(HousedPlacement {
                     house,
@@ -141,8 +142,8 @@ fn whole_sign_house(
 ) -> Result<HouseNumber, DeriveError> {
     let reference_sign = sign_index(reference_longitude)?;
     let target_sign = sign_index(target_longitude)?;
-    HouseNumber::new(((target_sign + NUM_HOUSES - reference_sign) % NUM_HOUSES + 1) as u8)
-        .ok_or(DeriveError::InvalidHouseCusps(NUM_HOUSES))
+    let house = ((target_sign + NUM_HOUSES - reference_sign) % NUM_HOUSES + 1) as u8;
+    HouseNumber::new(house).ok_or(DeriveError::InvalidHouseNumber(house))
 }
 
 fn sign_index(longitude: f64) -> Result<usize, DeriveError> {
@@ -186,5 +187,20 @@ fn is_in_range(longitude: f64, start: f64, end: f64) -> bool {
         longitude >= start && longitude < end
     } else {
         longitude >= start || longitude < end
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn whole_sign_house_always_returns_a_valid_house_number() {
+        for reference in [0.0, 29.999, 30.0, 180.0, 359.999] {
+            for target in [0.0, 15.0, 30.0, 90.0, 180.0, 359.999] {
+                let house = whole_sign_house(reference, target).unwrap();
+                assert!((1..=12).contains(&house.get()));
+            }
+        }
     }
 }

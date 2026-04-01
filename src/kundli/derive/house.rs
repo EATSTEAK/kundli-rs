@@ -52,8 +52,7 @@ fn derive_house_whole_sign(
 
     // Safety: house_number is always in range 1-12 due to modulo
     debug_assert!((1..=12).contains(&house_number));
-    HouseNumber::new(house_number as u8)
-        .ok_or(DeriveError::InvalidHouseNumber(house_number as u8))
+    HouseNumber::new(house_number as u8).ok_or(DeriveError::InvalidHouseNumber(house_number as u8))
 }
 
 /// Derives house placement using house cusps.

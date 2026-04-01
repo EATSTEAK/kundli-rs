@@ -61,7 +61,9 @@ fn derive_chart_layer(
         ChartKind::VimshottariDasha => Ok(ChartLayer::VimshottariDasha(derive_vimshottari_dasha(
             astro,
         )?)),
-        _ => Ok(ChartLayer::Chart(derive_chart_result(astro, config, chart)?)),
+        _ => Ok(ChartLayer::Chart(derive_chart_result(
+            astro, config, chart,
+        )?)),
     }
 }
 
@@ -70,8 +72,13 @@ fn derive_chart_result(
     config: &KundliConfig,
     chart: ChartSpec,
 ) -> Result<ChartResult, DeriveError> {
-    if matches!(chart.kind, ChartKind::Varga { .. } | ChartKind::DivisionalBhava { .. })
-        && astro.meta.zodiac != ZodiacType::Sidereal
+    // Bhava/Chalit currently share the same pipeline assembly as Rasi; the
+    // distinct chart kinds remain semantic placeholders until they gain their
+    // own result-shaping behavior.
+    if matches!(
+        chart.kind,
+        ChartKind::Varga { .. } | ChartKind::DivisionalBhava { .. }
+    ) && astro.meta.zodiac != ZodiacType::Sidereal
     {
         return Err(DeriveError::UnsupportedZodiac(astro.meta.zodiac));
     }
@@ -79,23 +86,25 @@ fn derive_chart_result(
     let reference = ReferenceTransform::new(chart.reference);
 
     match chart.kind {
-        ChartKind::Rasi | ChartKind::Bhava | ChartKind::Chalit => match resolve_house_mode(chart, config)? {
-            ResolvedHouseMode::WholeSign => ChartPipeline::new(
-                IdentityProjection,
-                reference,
-                IdentitySignTransform,
-                WholeSignHouseTransform,
-            )
-            .execute(astro.clone()),
-            ResolvedHouseMode::CuspBased(house_system) => ChartPipeline::new(
-                IdentityProjection,
-                reference,
-                IdentitySignTransform,
-                CuspBasedHouseTransform { house_system },
-            )
-            .execute(astro.clone()),
-            ResolvedHouseMode::None => unreachable!("non-dasha charts must expose houses"),
-        },
+        ChartKind::Rasi | ChartKind::Bhava | ChartKind::Chalit => {
+            match resolve_house_mode(chart, config)? {
+                ResolvedHouseMode::WholeSign => ChartPipeline::new(
+                    IdentityProjection,
+                    reference,
+                    IdentitySignTransform,
+                    WholeSignHouseTransform,
+                )
+                .execute(astro.clone()),
+                ResolvedHouseMode::CuspBased(house_system) => ChartPipeline::new(
+                    IdentityProjection,
+                    reference,
+                    IdentitySignTransform,
+                    CuspBasedHouseTransform { house_system },
+                )
+                .execute(astro.clone()),
+                ResolvedHouseMode::None => unreachable!("non-dasha charts must expose houses"),
+            }
+        }
         ChartKind::Varga { division } => match resolve_house_mode(chart, config)? {
             ResolvedHouseMode::WholeSign => ChartPipeline::new(
                 IdentityProjection,
@@ -141,7 +150,10 @@ enum ResolvedHouseMode {
     None,
 }
 
-fn resolve_house_mode(chart: ChartSpec, config: &KundliConfig) -> Result<ResolvedHouseMode, DeriveError> {
+fn resolve_house_mode(
+    chart: ChartSpec,
+    config: &KundliConfig,
+) -> Result<ResolvedHouseMode, DeriveError> {
     let configured = match config.house_system {
         HouseSystem::WholeSign => ResolvedHouseMode::WholeSign,
         other => ResolvedHouseMode::CuspBased(other),
@@ -154,14 +166,15 @@ fn resolve_house_mode(chart: ChartSpec, config: &KundliConfig) -> Result<Resolve
         HouseMode::None => ResolvedHouseMode::None,
     };
 
-    match chart.kind {
-        ChartKind::Bhava | ChartKind::Chalit | ChartKind::DivisionalBhava { .. }
-            if !matches!(resolved, ResolvedHouseMode::CuspBased(_)) =>
-        {
-            Err(DeriveError::UnsupportedHouseSystem(config.house_system))
-        }
-        _ => Ok(resolved),
-    }
+    debug_assert!(
+        !matches!(
+            chart.kind,
+            ChartKind::Bhava | ChartKind::Chalit | ChartKind::DivisionalBhava { .. }
+        ) || matches!(resolved, ResolvedHouseMode::CuspBased(_)),
+        "bhava-style charts must be validated as cusp-based before derivation"
+    );
+
+    Ok(resolved)
 }
 
 fn validate_request_matches_config(
@@ -305,7 +318,10 @@ mod tests {
         assert_eq!(result.meta.house_system, HouseSystem::WholeSign);
         assert_eq!(result.meta.node_type, NodeType::True);
         assert_eq!(result.meta.body_count, AstroBody::ALL.len());
-        let d1 = result.chart(ChartSpec::d1()).and_then(ChartLayer::as_chart).unwrap();
+        let d1 = result
+            .chart(ChartSpec::d1())
+            .and_then(ChartLayer::as_chart)
+            .unwrap();
         assert_eq!(d1.lagna.sign, crate::kundli::model::Sign::Taurus);
         assert_eq!(d1.planets[1].nakshatra.nakshatra, Nakshatra::Ashwini);
         assert!(result.chart(ChartSpec::d9()).is_some());
@@ -379,5 +395,39 @@ mod tests {
             error,
             KundliError::Astro(AstroError::InvalidCoordinates { .. })
         ));
+    }
+
+    #[test]
+    fn calculate_with_engine_rejects_bhava_selection_before_derivation() {
+        let request = sample_request();
+        let config = KundliConfig::from_request(&request).with_charts(&[ChartSpec::bhava()]);
+        let engine = StubEngine {
+            result: Ok(sample_astro()),
+        };
+
+        let error = calculate_kundli_with_engine(&engine, &request, &config).unwrap_err();
+
+        assert_eq!(
+            error,
+            KundliError::ChartSelection(
+                crate::kundli::error::ChartSelectionError::CuspBasedHouseModeRequired(
+                    ChartKind::Bhava,
+                ),
+            )
+        );
+    }
+
+    #[test]
+    fn resolve_house_mode_keeps_bhava_style_specs_cusp_based_after_validation() {
+        let config = KundliConfig::default().with_house_system(HouseSystem::WholeSign);
+
+        assert_eq!(
+            resolve_house_mode(
+                ChartSpec::bhava().with_house_mode(HouseMode::CuspBased(HouseSystem::Placidus)),
+                &config,
+            )
+            .unwrap(),
+            ResolvedHouseMode::CuspBased(HouseSystem::Placidus)
+        );
     }
 }
